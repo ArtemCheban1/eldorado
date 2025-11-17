@@ -24,8 +24,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const db = await getDatabase();
 
-    const newSite: ArchaeologicalSite = {
-      ...body,
+    // Remove _id from body if it exists, MongoDB will generate it
+    const { _id, ...siteData } = body;
+
+    const newSite = {
+      ...siteData,
       dateCreated: new Date().toISOString(),
       dateUpdated: new Date().toISOString(),
     };
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
     const result = await db.collection('sites').insertOne(newSite);
 
     return NextResponse.json(
-      { site: { ...newSite, _id: result.insertedId } },
+      { site: { ...newSite, _id: result.insertedId.toString() } },
       { status: 201 }
     );
   } catch (error) {
