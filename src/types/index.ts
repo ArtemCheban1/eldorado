@@ -1,6 +1,7 @@
 export interface ArchaeologicalSite {
   _id?: string;
   id: string;
+  projectId: string; // Reference to the project this site belongs to
   name: string;
   coordinates: [number, number]; // [latitude, longitude]
   radius: number; // in meters
@@ -49,7 +50,6 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
-  sites: ArchaeologicalSite[];
   layers: MapLayer[];
   defaultCenter?: [number, number];
   defaultZoom?: number;

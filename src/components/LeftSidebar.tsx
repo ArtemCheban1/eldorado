@@ -14,7 +14,7 @@ export default function LeftSidebar() {
       {/* Header */}
       <div className="p-4 border-b border-gray-700 flex items-center justify-between">
         {isExpanded && (
-          <h2 className="text-xl font-bold">El Dorado</h2>
+          <h2 className="text-xl font-bold">Tools</h2>
         )}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
