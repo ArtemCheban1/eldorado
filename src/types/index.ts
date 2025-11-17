@@ -1,6 +1,7 @@
 export interface ArchaeologicalSite {
   _id?: string;
   id: string;
+  projectId: string; // Reference to the project this site belongs to
   name: string;
   coordinates: [number, number]; // [latitude, longitude]
   radius: number; // in meters
@@ -49,7 +50,6 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
-  sites: ArchaeologicalSite[];
   layers: MapLayer[];
   defaultCenter?: [number, number];
   defaultZoom?: number;
@@ -67,7 +67,31 @@ export interface ImportData {
   };
 }
 
-// Georeferencing types
+// Georeferencing types - Main georeferencing tool
+export interface ControlPoint {
+  id: string;
+  imageCoordinates: { x: number; y: number }; // pixel coordinates on image
+  mapCoordinates: { lat: number; lng: number }; // geographic coordinates
+}
+
+export interface GeoreferencedLayer {
+  _id?: string;
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl: string; // URL to the uploaded image
+  imageWidth: number; // original image dimensions
+  imageHeight: number;
+  controlPoints: ControlPoint[]; // minimum 3 points for affine transformation
+  bounds: [[number, number], [number, number]]; // [[south, west], [north, east]]
+  opacity: number; // 0-1
+  visible: boolean;
+  dateCreated: Date | string;
+  dateUpdated: Date | string;
+  projectId?: string; // optional association with project
+}
+
+// Georeferencing types - Separate page georeference tool
 export interface ReferencePoint {
   id: string;
   imageCoordinates: { x: number; y: number }; // Pixel coordinates on the image
