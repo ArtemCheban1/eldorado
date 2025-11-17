@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Circle, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useMapLayers } from '@/context/MapLayersContext';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -30,9 +31,12 @@ interface ArchaeologicalSite {
 
 export default function MapView() {
   const [sites, setSites] = useState<ArchaeologicalSite[]>([]);
+  const { getVisibleLayers } = useMapLayers();
 
   // Default center (you can change this)
   const defaultCenter: [number, number] = [41.9028, 12.4964]; // Rome, Italy
+
+  const visibleLayers = getVisibleLayers();
 
   useEffect(() => {
     // Mock data - replace with API call later
@@ -86,10 +90,15 @@ export default function MapView() {
       className="h-full w-full"
       zoomControl={false}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      {visibleLayers.map((layer) => (
+        <TileLayer
+          key={layer.id}
+          attribution={layer.attribution}
+          url={layer.url}
+          opacity={layer.opacity}
+          maxZoom={layer.maxZoom}
+        />
+      ))}
 
       {sites.map((site) => (
         <div key={site.id}>

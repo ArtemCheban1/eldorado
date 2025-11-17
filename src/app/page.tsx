@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import LeftSidebar from '@/components/LeftSidebar';
 import RightSidebar from '@/components/RightSidebar';
+import { MapLayersProvider } from '@/context/MapLayersContext';
 
 // Dynamic import to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import('@/components/MapView'), {
@@ -19,17 +20,19 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 
 export default function Home() {
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* Left Sidebar - Tools & Navigation */}
-      <LeftSidebar />
+    <MapLayersProvider>
+      <div className="flex h-screen w-screen overflow-hidden">
+        {/* Left Sidebar - Tools & Navigation */}
+        <LeftSidebar />
 
-      {/* Main Map View */}
-      <main className="flex-1 relative">
-        <MapView />
-      </main>
+        {/* Main Map View */}
+        <main className="flex-1 relative">
+          <MapView />
+        </main>
 
-      {/* Right Sidebar - Details & Information */}
-      <RightSidebar />
-    </div>
+        {/* Right Sidebar - Details & Information */}
+        <RightSidebar />
+      </div>
+    </MapLayersProvider>
   );
 }

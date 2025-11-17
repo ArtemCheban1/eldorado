@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from 'react';
+import { useMapLayers } from '@/context/MapLayersContext';
 
 export default function LeftSidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { layers, toggleLayerVisibility, setLayerOpacity } = useMapLayers();
 
   return (
     <aside
@@ -40,20 +42,39 @@ export default function LeftSidebar() {
 
             {/* Map Layers */}
             <div className="mb-6">
-              <h4 className="text-sm font-medium mb-2">Map Layers</h4>
-              <div className="space-y-2">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded" />
-                  <span className="text-sm">OpenStreetMap</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" className="rounded" />
-                  <span className="text-sm">Google Maps</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" className="rounded" />
-                  <span className="text-sm">Historical Overlay</span>
-                </label>
+              <h4 className="text-sm font-medium mb-3">Map Layers</h4>
+              <div className="space-y-4">
+                {layers.map((layer) => (
+                  <div key={layer.id} className="space-y-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={layer.visible}
+                        onChange={() => toggleLayerVisibility(layer.id)}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{layer.name}</span>
+                    </label>
+                    {layer.visible && (
+                      <div className="ml-6 space-y-1">
+                        <div className="flex items-center justify-between text-xs text-gray-400">
+                          <span>Opacity</span>
+                          <span>{Math.round(layer.opacity * 100)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={layer.opacity * 100}
+                          onChange={(e) =>
+                            setLayerOpacity(layer.id, parseInt(e.target.value) / 100)
+                          }
+                          className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
