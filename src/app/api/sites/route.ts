@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
       dateUpdated: new Date().toISOString(),
     };
 
-    const result = await db.collection('sites').insertOne(newSite);
+    // MongoDB expects ObjectId for _id, so we omit it and let MongoDB generate it
+    const { _id, ...siteData } = newSite;
+    const result = await db.collection('sites').insertOne(siteData as any);
 
     return NextResponse.json(
       { site: { ...newSite, _id: result.insertedId } },

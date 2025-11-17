@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LeftSidebar() {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -81,6 +83,12 @@ export default function LeftSidebar() {
 
             {/* Actions */}
             <div className="space-y-2">
+              <button
+                onClick={() => router.push('/georeference')}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium"
+              >
+                Georeference Image
+              </button>
               <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium">
                 Import Points
               </button>
