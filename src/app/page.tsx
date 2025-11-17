@@ -1,8 +1,12 @@
 "use client";
 
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import axios from 'axios';
+import { ArchaeologicalSite } from '@/types';
 import LeftSidebar from '@/components/LeftSidebar';
 import RightSidebar from '@/components/RightSidebar';
+import FilterPanel from '@/components/FilterPanel';
 
 // Dynamic import to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import('@/components/MapView'), {
@@ -18,14 +22,51 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 });
 
 export default function Home() {
+  const [allSites, setAllSites] = useState<ArchaeologicalSite[]>([]);
+  const [filteredSites, setFilteredSites] = useState<ArchaeologicalSite[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Fetch sites from API
+  const fetchSites = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/sites');
+      const sites = response.data.sites || [];
+      setAllSites(sites);
+      setFilteredSites(sites);
+    } catch (error) {
+      console.error('Error fetching sites:', error);
+      setAllSites([]);
+      setFilteredSites([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSites();
+  }, [fetchSites]);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* Left Sidebar - Tools & Navigation */}
-      <LeftSidebar />
+      <LeftSidebar onShowFilters={() => setShowFilters(!showFilters)} />
+
+      {/* Filter Panel Overlay */}
+      {showFilters && (
+        <div className="fixed left-20 top-4 bottom-4 w-80 z-[1000] overflow-hidden">
+          <FilterPanel sites={allSites} onFilteredSitesChange={setFilteredSites} />
+          <button
+            onClick={() => setShowFilters(false)}
+            className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-lg hover:bg-gray-100"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Main Map View */}
       <main className="flex-1 relative">
-        <MapView />
+        <MapView key={filteredSites.length} sites={filteredSites} onSitesChange={fetchSites} />
       </main>
 
       {/* Right Sidebar - Details & Information */}

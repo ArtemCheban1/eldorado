@@ -1,18 +1,64 @@
+export type PointerType =
+  | 'info_pointer'           // General information pointer
+  | 'findings_pointer'       // Pointer with archaeological findings
+  | 'search_location'        // Possible place to search
+  | 'archaeological_area'    // Archaeological area (legacy)
+  | 'finding'                // Finding (legacy)
+  | 'point_of_interest';     // Point of interest (legacy)
+
+export interface Timespan {
+  period: string;            // e.g., "Cucuteni", "Middle Ages", "Bronze Age"
+  startYear?: number;        // Optional start year (negative for BC)
+  endYear?: number;          // Optional end year (negative for BC)
+  description?: string;      // Additional context about the period
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  color?: string;            // Hex color for visual grouping
+  icon?: string;             // Icon identifier
+}
+
 export interface ArchaeologicalSite {
   _id?: string;
   id: string;
   name: string;
   coordinates: [number, number]; // [latitude, longitude]
   radius: number; // in meters
-  type: 'archaeological_area' | 'finding' | 'point_of_interest';
-  category?: string;
+  type: PointerType;
+
+  // New fields for enhanced categorization
+  categories?: Category[];   // Multiple categories for grouping
+  tags?: string[];          // Tags for filtering (e.g., "neolithic", "pottery", "burial")
+  timespan?: Timespan;      // Historical period information
+
+  // Pointer-specific information
+  info?: string;            // Additional information (for info_pointer)
+  findings?: Finding[];     // Archaeological findings (for findings_pointer)
+  searchPriority?: 'high' | 'medium' | 'low'; // Priority for search locations
+  searchReason?: string;    // Why this location should be searched
+
+  // Legacy fields
+  category?: string;        // Keep for backward compatibility
   description?: string;
   dateDiscovered?: Date | string;
   dateCreated?: Date | string;
   dateUpdated?: Date | string;
-  artifacts?: Artifact[];
+  artifacts?: Artifact[];   // Legacy - use findings instead
   photos?: Photo[];
   metadata?: Record<string, any>;
+}
+
+export interface Finding {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'artifact' | 'structure' | 'burial' | 'pottery' | 'tool' | 'other';
+  dateFound?: Date | string;
+  photos?: Photo[];
+  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  tags?: string[];
 }
 
 export interface Artifact {
