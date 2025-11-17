@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { parseKML, findDuplicates } from '@/lib/kmlParser';
+import { parseKML, findDuplicates, ParsedSite } from '@/lib/kmlParser';
 import { getDatabase } from '@/lib/db';
 import { ArchaeologicalSite } from '@/types';
 
@@ -8,10 +8,18 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const skipDuplicates = formData.get('skipDuplicates') === 'true';
+    const projectId = formData.get('projectId') as string;
 
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'projectId is required' },
         { status: 400 }
       );
     }
@@ -37,18 +45,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get existing sites from database
+    // Get existing sites from database (filter by projectId for duplicate detection)
     const db = await getDatabase();
     const existingSites = await db
       .collection<ArchaeologicalSite>('sites')
-      .find({})
+      .find({ projectId })
       .toArray();
 
     // Check for duplicates
     const allNewSites = [...parsedData.points, ...parsedData.areas];
     const { duplicates, unique } = findDuplicates(allNewSites, existingSites);
 
-    let sitesToImport: ArchaeologicalSite[];
+    let sitesToImport: (ArchaeologicalSite | ParsedSite)[];
 
     if (skipDuplicates) {
       // Only import unique sites
@@ -67,10 +75,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Add projectId to all sites before importing
+    const sitesWithProjectId = sitesToImport.map(site => ({
+      ...site,
+      projectId,
+    }));
+
     // Insert sites into database
     const result = await db
       .collection<ArchaeologicalSite>('sites')
-      .insertMany(sitesToImport);
+      .insertMany(sitesWithProjectId as any);
 
     return NextResponse.json({
       success: true,

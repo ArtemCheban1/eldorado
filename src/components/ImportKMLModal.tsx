@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import axios from 'axios';
+import { useProject } from '@/contexts/ProjectContext';
 
 interface PreviewData {
   total: number;
@@ -40,6 +41,7 @@ interface ImportKMLModalProps {
 }
 
 export default function ImportKMLModal({ isOpen, onClose, onImportComplete }: ImportKMLModalProps) {
+  const { activeProject } = useProject();
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
@@ -70,6 +72,11 @@ export default function ImportKMLModal({ isOpen, onClose, onImportComplete }: Im
   const handlePreview = async () => {
     if (!file) return;
 
+    if (!activeProject) {
+      setError('No project selected. Please select a project first.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
@@ -77,6 +84,7 @@ export default function ImportKMLModal({ isOpen, onClose, onImportComplete }: Im
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('projectId', activeProject.id);
 
       const response = await axios.post('/api/import/preview', formData, {
         headers: {
@@ -101,6 +109,11 @@ export default function ImportKMLModal({ isOpen, onClose, onImportComplete }: Im
   const handleImport = async () => {
     if (!file) return;
 
+    if (!activeProject) {
+      setError('No project selected. Please select a project first.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
@@ -108,6 +121,7 @@ export default function ImportKMLModal({ isOpen, onClose, onImportComplete }: Im
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('projectId', activeProject.id);
       formData.append('skipDuplicates', skipDuplicates.toString());
 
       const response = await axios.post('/api/import/execute', formData, {

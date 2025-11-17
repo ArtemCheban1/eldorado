@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Circle, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
+import { useProject } from '@/contexts/ProjectContext';
+import { ArchaeologicalSite } from '@/types';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -19,14 +21,15 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-interface ArchaeologicalSite {
-  id: string;
-  name: string;
-  coordinates: [number, number];
-  radius: number;
-  type: 'archaeological_area' | 'finding' | 'point_of_interest';
-  description?: string;
-  photos?: string[];
+// Component to control map view when project changes
+function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+
+  return null;
 }
 
 interface MapViewProps {
@@ -34,29 +37,36 @@ interface MapViewProps {
 }
 
 export default function MapView({ refreshTrigger }: MapViewProps) {
+  const { activeProject, isLoading: isProjectLoading } = useProject();
   const [sites, setSites] = useState<ArchaeologicalSite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Default center (you can change this)
-  const defaultCenter: [number, number] = [41.9028, 12.4964]; // Rome, Italy
+  // Default center and zoom
+  const defaultCenter: [number, number] = activeProject?.defaultCenter || [41.9028, 12.4964];
+  const defaultZoom = activeProject?.defaultZoom || 13;
 
   useEffect(() => {
-    const fetchSites = async () => {
+    const loadSites = async () => {
+      if (!activeProject) {
+        setSites([]);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
-        const response = await axios.get('/api/sites');
-        setSites(response.data.sites || []);
+        const response = await axios.get(`/api/sites?projectId=${activeProject.id}`);
+        setSites(response.data.sites);
       } catch (error) {
-        console.error('Error fetching sites:', error);
-        // Fallback to empty array on error
+        console.error('Error loading sites:', error);
         setSites([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchSites();
-  }, [refreshTrigger]);
+    loadSites();
+  }, [activeProject, refreshTrigger]);
 
   const getColor = (type: ArchaeologicalSite['type']) => {
     switch (type) {
@@ -71,13 +81,40 @@ export default function MapView({ refreshTrigger }: MapViewProps) {
     }
   };
 
+  // Show loading state or message when no project is active
+  if (isProjectLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading project...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeProject) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          <p className="text-gray-600 text-lg">No project selected</p>
+          <p className="text-gray-500 text-sm mt-2">Create or select a project to get started</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <MapContainer
       center={defaultCenter}
-      zoom={13}
+      zoom={defaultZoom}
       className="h-full w-full"
       zoomControl={false}
     >
+      <MapController center={defaultCenter} zoom={defaultZoom} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

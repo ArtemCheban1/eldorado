@@ -2,9 +2,12 @@ import { kml } from '@tmcw/togeojson';
 import { DOMParser } from 'xmldom';
 import { ArchaeologicalSite } from '@/types';
 
+// Type for sites before projectId is added
+export type ParsedSite = Omit<ArchaeologicalSite, 'projectId'>;
+
 export interface ParsedKMLData {
-  points: ArchaeologicalSite[];
-  areas: ArchaeologicalSite[];
+  points: ParsedSite[];
+  areas: ParsedSite[];
   total: number;
 }
 
@@ -93,15 +96,15 @@ function getPolygonCentroid(coordinates: number[][][]): [number, number] {
 }
 
 /**
- * Parse KML file content and convert to ArchaeologicalSite objects
+ * Parse KML file content and convert to ArchaeologicalSite objects (without projectId)
  */
 export function parseKML(kmlContent: string): ParsedKMLData {
   const parser = new DOMParser();
   const kmlDoc = parser.parseFromString(kmlContent, 'text/xml');
   const geojson = kml(kmlDoc);
 
-  const points: ArchaeologicalSite[] = [];
-  const areas: ArchaeologicalSite[] = [];
+  const points: ParsedSite[] = [];
+  const areas: ParsedSite[] = [];
 
   if (!geojson.features || geojson.features.length === 0) {
     return { points, areas, total: 0 };
@@ -122,7 +125,7 @@ export function parseKML(kmlContent: string): ParsedKMLData {
       // Handle Point geometries
       const [lng, lat] = geometry.coordinates as number[];
 
-      const site: ArchaeologicalSite = {
+      const site: ParsedSite = {
         id,
         name,
         coordinates: [lat, lng],
@@ -153,7 +156,7 @@ export function parseKML(kmlContent: string): ParsedKMLData {
       const centroid = getPolygonCentroid(coordinates);
       const radius = calculatePolygonRadius(coordinates);
 
-      const site: ArchaeologicalSite = {
+      const site: ParsedSite = {
         id,
         name,
         coordinates: centroid,
@@ -176,7 +179,7 @@ export function parseKML(kmlContent: string): ParsedKMLData {
       const coords = geometry.coordinates as number[][];
       coords.forEach((coord, idx) => {
         const [lng, lat] = coord;
-        const site: ArchaeologicalSite = {
+        const site: ParsedSite = {
           id: `${id}-line-${idx}`,
           name: `${name} (Point ${idx + 1})`,
           coordinates: [lat, lng],
@@ -230,23 +233,23 @@ export function generatePreview(parsedData: ParsedKMLData, limit: number = 10): 
  * Two sites are considered duplicates if they are within 10 meters of each other
  */
 export function findDuplicates(
-  newSites: ArchaeologicalSite[],
+  newSites: (ArchaeologicalSite | ParsedSite)[],
   existingSites: ArchaeologicalSite[],
   thresholdMeters: number = 10
 ): {
   duplicates: Array<{
-    newSite: ArchaeologicalSite;
+    newSite: ArchaeologicalSite | ParsedSite;
     existingSite: ArchaeologicalSite;
     distance: number;
   }>;
-  unique: ArchaeologicalSite[];
+  unique: (ArchaeologicalSite | ParsedSite)[];
 } {
   const duplicates: Array<{
-    newSite: ArchaeologicalSite;
+    newSite: ArchaeologicalSite | ParsedSite;
     existingSite: ArchaeologicalSite;
     distance: number;
   }> = [];
-  const unique: ArchaeologicalSite[] = [];
+  const unique: (ArchaeologicalSite | ParsedSite)[] = [];
 
   newSites.forEach(newSite => {
     let isDuplicate = false;

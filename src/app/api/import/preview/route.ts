@@ -7,10 +7,18 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const projectId = formData.get('projectId') as string;
 
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'projectId is required' },
         { status: 400 }
       );
     }
@@ -36,11 +44,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get existing sites from database for duplicate checking
+    // Get existing sites from database for duplicate checking (filter by projectId)
     const db = await getDatabase();
     const existingSites = await db
       .collection<ArchaeologicalSite>('sites')
-      .find({})
+      .find({ projectId })
       .toArray();
 
     // Check for duplicates
