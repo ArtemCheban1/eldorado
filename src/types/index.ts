@@ -66,3 +66,26 @@ export interface ImportData {
     category?: string;
   };
 }
+
+export interface ControlPoint {
+  id: string;
+  imageCoordinates: { x: number; y: number }; // pixel coordinates on image
+  mapCoordinates: { lat: number; lng: number }; // geographic coordinates
+}
+
+export interface GeoreferencedLayer {
+  _id?: string;
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl: string; // URL to the uploaded image
+  imageWidth: number; // original image dimensions
+  imageHeight: number;
+  controlPoints: ControlPoint[]; // minimum 3 points for affine transformation
+  bounds: [[number, number], [number, number]]; // [[south, west], [north, east]]
+  opacity: number; // 0-1
+  visible: boolean;
+  dateCreated: Date | string;
+  dateUpdated: Date | string;
+  projectId?: string; // optional association with project
+}

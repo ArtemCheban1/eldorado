@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Circle, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import { useMapLayers } from '@/context/MapLayersContext';
 import { useProject } from '@/contexts/ProjectContext';
-import { ArchaeologicalSite } from '@/types';
+import { ArchaeologicalSite, GeoreferencedLayer } from '@/types';
+import GeoreferencedImageOverlay from './GeoreferencedImageOverlay';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -33,11 +34,25 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
   return null;
 }
 
-interface MapViewProps {
-  refreshTrigger?: number;
+// Component to handle map clicks for georeferencing
+function MapClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      if (onClick) {
+        onClick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
 }
 
-export default function MapView({ refreshTrigger }: MapViewProps) {
+interface MapViewProps {
+  refreshTrigger?: number;
+  georeferencedLayers?: GeoreferencedLayer[];
+  onMapClick?: (lat: number, lng: number) => void;
+}
+
+export default function MapView({ refreshTrigger, georeferencedLayers = [], onMapClick }: MapViewProps) {
   const { activeProject, isLoading: isProjectLoading } = useProject();
   const { getVisibleLayers } = useMapLayers();
   const [sites, setSites] = useState<ArchaeologicalSite[]>([]);
@@ -119,6 +134,8 @@ export default function MapView({ refreshTrigger }: MapViewProps) {
       zoomControl={false}
     >
       <MapController center={defaultCenter} zoom={defaultZoom} />
+
+      {/* Base map layers from context */}
       {visibleLayers.map((layer) => (
         <TileLayer
           key={layer.id}
@@ -129,6 +146,15 @@ export default function MapView({ refreshTrigger }: MapViewProps) {
         />
       ))}
 
+      {/* Map click handler for georeferencing */}
+      <MapClickHandler onClick={onMapClick} />
+
+      {/* Georeferenced image layers */}
+      {georeferencedLayers.map((layer) => (
+        <GeoreferencedImageOverlay key={layer.id} layer={layer} />
+      ))}
+
+      {/* Archaeological sites */}
       {sites.map((site) => (
         <div key={site.id}>
           {site.type === 'archaeological_area' ? (

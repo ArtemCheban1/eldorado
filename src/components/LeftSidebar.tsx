@@ -2,13 +2,27 @@
 
 import { useState } from 'react';
 import { useMapLayers } from '@/context/MapLayersContext';
+import { GeoreferencedLayer } from '@/types';
+import GeoreferencedLayerManager from './GeoreferencedLayerManager';
 import ImportKMLModal from './ImportKMLModal';
 
 interface LeftSidebarProps {
   onDataRefresh?: () => void;
+  georeferencedLayers: GeoreferencedLayer[];
+  onOpenGeoreferencingTool: () => void;
+  onLayersUpdate: () => void;
+  onLayerToggle: (layerId: string, visible: boolean) => void;
+  onLayerOpacityChange: (layerId: string, opacity: number) => void;
 }
 
-export default function LeftSidebar({ onDataRefresh }: LeftSidebarProps) {
+export default function LeftSidebar({
+  onDataRefresh,
+  georeferencedLayers,
+  onOpenGeoreferencingTool,
+  onLayersUpdate,
+  onLayerToggle,
+  onLayerOpacityChange
+}: LeftSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const { layers, toggleLayerVisibility, setLayerOpacity } = useMapLayers();
   const [showImportModal, setShowImportModal] = useState(false);
@@ -106,8 +120,34 @@ export default function LeftSidebar({ onDataRefresh }: LeftSidebarProps) {
               </div>
             </div>
 
+            {/* Georeferenced Layers */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium">Georeferenced Layers</h4>
+                <button
+                  onClick={onOpenGeoreferencingTool}
+                  className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
+                  title="Add georeferenced map"
+                >
+                  + Add
+                </button>
+              </div>
+              <GeoreferencedLayerManager
+                layers={georeferencedLayers}
+                onLayersUpdate={onLayersUpdate}
+                onLayerToggle={onLayerToggle}
+                onLayerOpacityChange={onLayerOpacityChange}
+              />
+            </div>
+
             {/* Actions */}
             <div className="space-y-2">
+              <button
+                onClick={onOpenGeoreferencingTool}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium"
+              >
+                Georeference Map
+              </button>
               <button
                 onClick={() => setShowImportModal(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium"
