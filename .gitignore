@@ -32,3 +32,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# exploration documentation
+ARCHITECTURE.md
+CODEBASE_SUMMARY.md
+QUICK_REFERENCE.txt
+VISUAL_ARCHITECTURE.txt

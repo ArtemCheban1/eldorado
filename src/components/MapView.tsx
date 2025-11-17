@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Circle, Marker, Popup, useMap } from 'react-le
 import L from 'leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
+import { useMapLayers } from '@/context/MapLayersContext';
 import { useProject } from '@/contexts/ProjectContext';
 import { ArchaeologicalSite } from '@/types';
 
@@ -38,8 +39,11 @@ interface MapViewProps {
 
 export default function MapView({ refreshTrigger }: MapViewProps) {
   const { activeProject, isLoading: isProjectLoading } = useProject();
+  const { getVisibleLayers } = useMapLayers();
   const [sites, setSites] = useState<ArchaeologicalSite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const visibleLayers = getVisibleLayers();
 
   // Default center and zoom
   const defaultCenter: [number, number] = activeProject?.defaultCenter || [41.9028, 12.4964];
@@ -115,10 +119,15 @@ export default function MapView({ refreshTrigger }: MapViewProps) {
       zoomControl={false}
     >
       <MapController center={defaultCenter} zoom={defaultZoom} />
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      {visibleLayers.map((layer) => (
+        <TileLayer
+          key={layer.id}
+          attribution={layer.attribution}
+          url={layer.url}
+          opacity={layer.opacity}
+          maxZoom={layer.maxZoom}
+        />
+      ))}
 
       {sites.map((site) => (
         <div key={site.id}>
