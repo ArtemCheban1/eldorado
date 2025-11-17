@@ -2,10 +2,16 @@
 
 import { useState } from 'react';
 import { useMapLayers } from '@/context/MapLayersContext';
+import ImportKMLModal from './ImportKMLModal';
 
-export default function LeftSidebar() {
+interface LeftSidebarProps {
+  onDataRefresh?: () => void;
+}
+
+export default function LeftSidebar({ onDataRefresh }: LeftSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const { layers, toggleLayerVisibility, setLayerOpacity } = useMapLayers();
+  const [showImportModal, setShowImportModal] = useState(false);
 
   return (
     <aside
@@ -16,7 +22,7 @@ export default function LeftSidebar() {
       {/* Header */}
       <div className="p-4 border-b border-gray-700 flex items-center justify-between">
         {isExpanded && (
-          <h2 className="text-xl font-bold">El Dorado</h2>
+          <h2 className="text-xl font-bold">Tools</h2>
         )}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -102,8 +108,11 @@ export default function LeftSidebar() {
 
             {/* Actions */}
             <div className="space-y-2">
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium">
-                Import Points
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium"
+              >
+                Import KML File
               </button>
               <button className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium">
                 Add New Site
@@ -124,13 +133,26 @@ export default function LeftSidebar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
             </svg>
           </button>
-          <button className="p-3 hover:bg-gray-800 rounded transition-colors" title="Import">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="p-3 hover:bg-gray-800 rounded transition-colors"
+            title="Import KML"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
           </button>
         </div>
       )}
+
+      {/* Import Modal */}
+      <ImportKMLModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={() => {
+          onDataRefresh?.();
+        }}
+      />
     </aside>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Header } from '@/components/Header';
 import LeftSidebar from '@/components/LeftSidebar';
 import RightSidebar from '@/components/RightSidebar';
 import { MapLayersProvider } from '@/context/MapLayersContext';
@@ -19,19 +21,31 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 });
 
 export default function Home() {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleDataRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
     <MapLayersProvider>
-      <div className="flex h-screen w-screen overflow-hidden">
-        {/* Left Sidebar - Tools & Navigation */}
-        <LeftSidebar />
+      <div className="flex flex-col h-screen w-screen overflow-hidden">
+        {/* Header with Project Switcher */}
+        <Header />
 
-        {/* Main Map View */}
-        <main className="flex-1 relative">
-          <MapView />
-        </main>
+        {/* Main Content Area */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Sidebar - Tools & Navigation */}
+          <LeftSidebar onDataRefresh={handleDataRefresh} />
 
-        {/* Right Sidebar - Details & Information */}
-        <RightSidebar />
+          {/* Main Map View */}
+          <main className="flex-1 relative">
+            <MapView refreshTrigger={refreshTrigger} />
+          </main>
+
+          {/* Right Sidebar - Details & Information */}
+          <RightSidebar />
+        </div>
       </div>
     </MapLayersProvider>
   );
