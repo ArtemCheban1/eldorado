@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Circle, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in React-Leaflet
@@ -28,43 +29,34 @@ interface ArchaeologicalSite {
   photos?: string[];
 }
 
-export default function MapView() {
+interface MapViewProps {
+  refreshTrigger?: number;
+}
+
+export default function MapView({ refreshTrigger }: MapViewProps) {
   const [sites, setSites] = useState<ArchaeologicalSite[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Default center (you can change this)
   const defaultCenter: [number, number] = [41.9028, 12.4964]; // Rome, Italy
 
   useEffect(() => {
-    // Mock data - replace with API call later
-    const mockSites: ArchaeologicalSite[] = [
-      {
-        id: '1',
-        name: 'Archaeological Site Alpha',
-        coordinates: [41.9028, 12.4964],
-        radius: 500,
-        type: 'archaeological_area',
-        description: 'Ancient Roman ruins discovered in 2023',
-      },
-      {
-        id: '2',
-        name: 'Finding Point Beta',
-        coordinates: [41.9100, 12.5000],
-        radius: 100,
-        type: 'finding',
-        description: 'Pottery fragments found here',
-      },
-      {
-        id: '3',
-        name: 'Point of Interest Gamma',
-        coordinates: [41.8950, 12.4800],
-        radius: 50,
-        type: 'point_of_interest',
-        description: 'Historical landmark',
-      },
-    ];
+    const fetchSites = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get('/api/sites');
+        setSites(response.data.sites || []);
+      } catch (error) {
+        console.error('Error fetching sites:', error);
+        // Fallback to empty array on error
+        setSites([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    setSites(mockSites);
-  }, []);
+    fetchSites();
+  }, [refreshTrigger]);
 
   const getColor = (type: ArchaeologicalSite['type']) => {
     switch (type) {

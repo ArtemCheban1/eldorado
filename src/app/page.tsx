@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import LeftSidebar from '@/components/LeftSidebar';
 import RightSidebar from '@/components/RightSidebar';
@@ -18,14 +19,20 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 });
 
 export default function Home() {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleDataRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* Left Sidebar - Tools & Navigation */}
-      <LeftSidebar />
+      <LeftSidebar onDataRefresh={handleDataRefresh} />
 
       {/* Main Map View */}
       <main className="flex-1 relative">
-        <MapView />
+        <MapView refreshTrigger={refreshTrigger} />
       </main>
 
       {/* Right Sidebar - Details & Information */}
