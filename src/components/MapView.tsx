@@ -32,7 +32,11 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
   return null;
 }
 
-export default function MapView() {
+interface MapViewProps {
+  refreshTrigger?: number;
+}
+
+export default function MapView({ refreshTrigger }: MapViewProps) {
   const { activeProject, isLoading: isProjectLoading } = useProject();
   const [sites, setSites] = useState<ArchaeologicalSite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +66,7 @@ export default function MapView() {
     };
 
     loadSites();
-  }, [activeProject]);
+  }, [activeProject, refreshTrigger]);
 
   const getColor = (type: ArchaeologicalSite['type']) => {
     switch (type) {
