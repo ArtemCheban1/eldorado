@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMapLayers } from '@/context/MapLayersContext';
 import { GeoreferencedLayer } from '@/types';
 import GeoreferencedLayerManager from './GeoreferencedLayerManager';
@@ -23,6 +24,7 @@ export default function LeftSidebar({
   onLayerToggle,
   onLayerOpacityChange
 }: LeftSidebarProps) {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(true);
   const { layers, toggleLayerVisibility, setLayerOpacity } = useMapLayers();
   const [showImportModal, setShowImportModal] = useState(false);
@@ -147,6 +149,12 @@ export default function LeftSidebar({
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium"
               >
                 Georeference Map
+              </button>
+              <button
+                onClick={() => router.push('/georeference')}
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded transition-colors text-sm font-medium"
+              >
+                Georeference (Separate Page)
               </button>
               <button
                 onClick={() => setShowImportModal(true)}

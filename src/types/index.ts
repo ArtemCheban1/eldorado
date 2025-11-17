@@ -67,6 +67,7 @@ export interface ImportData {
   };
 }
 
+// Georeferencing types - Main georeferencing tool
 export interface ControlPoint {
   id: string;
   imageCoordinates: { x: number; y: number }; // pixel coordinates on image
@@ -88,4 +89,31 @@ export interface GeoreferencedLayer {
   dateCreated: Date | string;
   dateUpdated: Date | string;
   projectId?: string; // optional association with project
+}
+
+// Georeferencing types - Separate page georeference tool
+export interface ReferencePoint {
+  id: string;
+  imageCoordinates: { x: number; y: number }; // Pixel coordinates on the image
+  mapCoordinates: { lat: number; lng: number }; // Real-world coordinates
+  label?: string;
+}
+
+export interface HistoricalImage {
+  id: string;
+  url: string;
+  name: string;
+  width: number;
+  height: number;
+  dateUploaded: Date | string;
+}
+
+export interface GeoreferencingProject {
+  _id?: string;
+  id: string;
+  name: string;
+  image: HistoricalImage;
+  referencePoints: ReferencePoint[];
+  dateCreated: Date | string;
+  dateUpdated: Date | string;
 }
