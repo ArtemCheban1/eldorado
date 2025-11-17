@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Sample Archaeological Sites</name>
+    <description>Sample KML file with archaeological sites, findings, and areas for testing import</description>
+
+    <!-- Point 1: Colosseum -->
+    <Placemark>
+      <name>Colosseum</name>
+      <description>The iconic amphitheatre in the centre of Rome, built of travertine limestone, tuff, and brick-faced concrete.</description>
+      <Point>
+        <coordinates>12.4924,41.8902,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 2: Roman Forum -->
+    <Placemark>
+      <name>Roman Forum</name>
+      <description>A rectangular forum surrounded by the ruins of several important ancient government buildings at the center of Rome.</description>
+      <Point>
+        <coordinates>12.4853,41.8925,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 3: Pantheon -->
+    <Placemark>
+      <name>Pantheon</name>
+      <description>A former Roman temple and since the 7th century a Catholic church in Rome.</description>
+      <Point>
+        <coordinates>12.4768,41.8986,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 4: Trevi Fountain -->
+    <Placemark>
+      <name>Trevi Fountain</name>
+      <description>The largest Baroque fountain in the city and one of the most famous fountains in the world.</description>
+      <Point>
+        <coordinates>12.4833,41.9009,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 5: Spanish Steps -->
+    <Placemark>
+      <name>Spanish Steps</name>
+      <description>A set of steps in Rome, climbing a steep slope between the Piazza di Spagna at the base and Piazza Trinità dei Monti.</description>
+      <Point>
+        <coordinates>12.4823,41.9058,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 6: Castel Sant'Angelo -->
+    <Placemark>
+      <name>Castel Sant'Angelo</name>
+      <description>A towering cylindrical building in Rome, initially commissioned by the Roman Emperor Hadrian as a mausoleum.</description>
+      <Point>
+        <coordinates>12.4663,41.9031,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 7: Circus Maximus -->
+    <Placemark>
+      <name>Circus Maximus</name>
+      <description>An ancient Roman chariot-racing stadium and mass entertainment venue in Rome.</description>
+      <Point>
+        <coordinates>12.4864,41.8858,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Polygon 1: Vatican City Area -->
+    <Placemark>
+      <name>Vatican City Archaeological Area</name>
+      <description>Area containing multiple ancient Roman structures and early Christian sites.</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              12.4512,41.9029,0
+              12.4581,41.9029,0
+              12.4581,41.9062,0
+              12.4512,41.9062,0
+              12.4512,41.9029,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+
+    <!-- Polygon 2: Palatine Hill -->
+    <Placemark>
+      <name>Palatine Hill Archaeological Zone</name>
+      <description>The centremost of the Seven Hills of Rome, one of the most ancient parts of the city and contains many important ancient ruins.</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              12.4835,41.8881,0
+              12.4915,41.8881,0
+              12.4915,41.8913,0
+              12.4835,41.8913,0
+              12.4835,41.8881,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+
+    <!-- Polygon 3: Baths of Caracalla -->
+    <Placemark>
+      <name>Baths of Caracalla</name>
+      <description>Ancient Roman public baths, or thermae, built in Rome between AD 212 and 216, during the reign of Emperor Caracalla.</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              12.4911,41.8790,0
+              12.4954,41.8790,0
+              12.4954,41.8809,0
+              12.4911,41.8809,0
+              12.4911,41.8790,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+
+    <!-- Point 8: Ara Pacis -->
+    <Placemark>
+      <name>Ara Pacis</name>
+      <description>An altar in Rome dedicated to Pax, the Roman goddess of Peace. Built in 13 BC.</description>
+      <Point>
+        <coordinates>12.4761,41.9062,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 9: Baths of Diocletian -->
+    <Placemark>
+      <name>Baths of Diocletian</name>
+      <description>Ancient public baths built from AD 298 to 306, the largest of the imperial baths.</description>
+      <Point>
+        <coordinates>12.4978,41.9031,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 10: Temple of Saturn -->
+    <Placemark>
+      <name>Temple of Saturn</name>
+      <description>An ancient Roman temple to the god Saturn, in the Roman Forum.</description>
+      <Point>
+        <coordinates>12.4841,41.8922,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 11: Arch of Constantine -->
+    <Placemark>
+      <name>Arch of Constantine</name>
+      <description>A triumphal arch in Rome dedicated to the emperor Constantine the Great.</description>
+      <Point>
+        <coordinates>12.4905,41.8897,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <!-- Point 12: Trajan's Column -->
+    <Placemark>
+      <name>Trajan's Column</name>
+      <description>A Roman triumphal column in Rome, Italy, that commemorates Roman emperor Trajan's victory in the Dacian Wars.</description>
+      <Point>
+        <coordinates>12.4843,41.8958,0</coordinates>
+      </Point>
+    </Placemark>
+
+  </Document>
+</kml>
