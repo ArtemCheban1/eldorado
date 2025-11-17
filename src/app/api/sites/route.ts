@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       dateUpdated: new Date().toISOString(),
     };
 
-    const result = await db.collection('sites').insertOne(newSite);
+    const result = await db.collection('sites').insertOne(newSite as any);
 
     return NextResponse.json(
       { site: { ...newSite, _id: result.insertedId } },

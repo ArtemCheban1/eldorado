@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Circle, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { GeoreferencedLayer } from '@/types';
+import GeoreferencedImageOverlay from './GeoreferencedImageOverlay';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -28,7 +30,24 @@ interface ArchaeologicalSite {
   photos?: string[];
 }
 
-export default function MapView() {
+interface MapViewProps {
+  georeferencedLayers?: GeoreferencedLayer[];
+  onMapClick?: (lat: number, lng: number) => void;
+}
+
+// Component to handle map clicks
+function MapClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      if (onClick) {
+        onClick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
+}
+
+export default function MapView({ georeferencedLayers = [], onMapClick }: MapViewProps = {}) {
   const [sites, setSites] = useState<ArchaeologicalSite[]>([]);
 
   // Default center (you can change this)
@@ -90,6 +109,14 @@ export default function MapView() {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {/* Map click handler for georeferencing */}
+      <MapClickHandler onClick={onMapClick} />
+
+      {/* Georeferenced image layers */}
+      {georeferencedLayers.map((layer) => (
+        <GeoreferencedImageOverlay key={layer.id} layer={layer} />
+      ))}
 
       {sites.map((site) => (
         <div key={site.id}>
