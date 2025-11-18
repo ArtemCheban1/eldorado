@@ -1,31 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { ArchaeologicalSite } from '@/types';
-import { requireAuth } from '@/lib/auth-middleware';
+import { withAuth } from '@/lib/middleware';
 
-// GET /api/sites - Get all sites for the authenticated user (optionally filtered by projectId)
+// GET /api/sites - Get all sites
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth();
-    if (auth.error) {
-      return auth.response;
-    }
-
-    const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get('projectId');
-
     const db = await getDatabase();
-
-    // Always filter by userId for security, optionally also by projectId
-    const query: any = { userId: auth.userId };
-    if (projectId) {
-      query.projectId = projectId;
-    }
-
-    const sites = await db
-      .collection<ArchaeologicalSite>('sites')
-      .find(query)
-      .toArray();
+    const sites = await db.collection<ArchaeologicalSite>('sites').find({}).toArray();
 
     return NextResponse.json({ sites }, { status: 200 });
   } catch (error) {
@@ -37,37 +19,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/sites - Create a new site for the authenticated user
-export async function POST(request: NextRequest) {
+// POST /api/sites - Create a new site (requires authentication)
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
-    const auth = await requireAuth();
-    if (auth.error) {
-      return auth.response;
-    }
-
     const body = await request.json();
-
-    // Validate that projectId is provided
-    if (!body.projectId) {
-      return NextResponse.json(
-        { error: 'projectId is required' },
-        { status: 400 }
-      );
-    }
-
     const db = await getDatabase();
 
-    // Remove _id from body if it exists, let MongoDB generate it
+    // Remove _id from body if it exists, MongoDB will generate it
     const { _id, ...siteData } = body;
 
-    const newSite: Omit<ArchaeologicalSite, '_id'> = {
+    const newSite = {
       ...siteData,
-      userId: auth.userId, // Assign to authenticated user
       dateCreated: new Date().toISOString(),
       dateUpdated: new Date().toISOString(),
+      createdBy: user.userId, // Add user who created the site
     };
 
-    const result = await db.collection('sites').insertOne(newSite as any);
+    const result = await db.collection('sites').insertOne(newSite);
 
     return NextResponse.json(
       { site: { ...newSite, _id: result.insertedId.toString() } },
@@ -80,4 +48,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

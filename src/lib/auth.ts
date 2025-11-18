@@ -72,21 +72,99 @@ export function isValidEmail(email: string): boolean {
 
 /**
  * Validate password strength
- * At least 6 characters
+ * At least 8 characters with uppercase, lowercase, and number
  */
 export function isValidPassword(password: string): boolean {
   return password.length >= 6;
 }
 
 /**
+ * Strong password validation
+ * At least 8 characters with uppercase, lowercase, and number
+ */
+export function validatePassword(password: string): { valid: boolean; error?: string } {
+  if (password.length < 8) {
+    return { valid: false, error: 'Password must be at least 8 characters long' };
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one uppercase letter' };
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one lowercase letter' };
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one number' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate username format
+ */
+export function validateUsername(username: string): { valid: boolean; error?: string } {
+  if (username.length < 3) {
+    return { valid: false, error: 'Username must be at least 3 characters long' };
+  }
+
+  if (username.length > 30) {
+    return { valid: false, error: 'Username must be no more than 30 characters long' };
+  }
+
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    return {
+      valid: false,
+      error: 'Username can only contain letters, numbers, and underscores',
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Alias for email validation
+ */
+export function validateEmail(email: string): boolean {
+  return isValidEmail(email);
+}
+
+/**
+ * Extract token from Authorization header
+ */
+export function extractTokenFromHeader(authHeader: string | null): string | null {
+  if (!authHeader) {
+    return null;
+  }
+
+  // Expected format: "Bearer <token>"
+  const parts = authHeader.split(' ');
+  if (parts.length === 2 && parts[0] === 'Bearer') {
+    return parts[1];
+  }
+
+  return null;
+}
+
+/**
  * Get authenticated user from request
+ * Supports both cookie-based and header-based authentication
  * Returns the JWT payload if authenticated, null otherwise
  */
 export function getAuthUser(request: NextRequest): JWTPayload | null {
   try {
-    const cookieHeader = request.headers.get('cookie') || '';
-    const cookies = parse(cookieHeader);
-    const token = cookies.auth_token;
+    // Try to get token from Authorization header first
+    const authHeader = request.headers.get('authorization');
+    let token = extractTokenFromHeader(authHeader);
+
+    // Fall back to cookie if no header token
+    if (!token) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const cookies = parse(cookieHeader);
+      token = cookies.auth_token;
+    }
 
     if (!token) {
       return null;

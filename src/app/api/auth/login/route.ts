@@ -1,24 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
-import { User } from '@/types';
+import { User, AuthResponse } from '@/types';
 import { comparePassword, generateToken, isValidEmail } from '@/lib/auth';
 import { serialize } from 'cookie';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const { email, username, password } = body;
 
-    // Validate input
-    if (!email || !password) {
+    // Validate input - require either email or username, plus password
+    if ((!email && !username) || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        {
+          success: false,
+          error: 'Email or username and password are required',
+          message: 'Email or username and password are required',
+        } as AuthResponse,
         { status: 400 }
       );
     }
 
-    if (!isValidEmail(email)) {
+    // Validate email format if provided
+    if (email && !isValidEmail(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        {
+          success: false,
+          error: 'Invalid email format',
+          message: 'Invalid email format',
+        } as AuthResponse,
         { status: 400 }
       );
     }
@@ -27,11 +37,22 @@ export async function POST(request: NextRequest) {
     const { db } = await connectToDatabase();
     const usersCollection = db.collection<User>('users');
 
-    // Find user by email
-    const user = await usersCollection.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    // Find user by email or username
+    let user: User | null = null;
+
+    if (email) {
+      user = await usersCollection.findOne({ email: email.toLowerCase() });
+    } else if (username) {
+      user = await usersCollection.findOne({ username });
+    }
+
+    if (!user || !user.password) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        {
+          success: false,
+          error: 'Invalid credentials',
+          message: 'Invalid email/username or password',
+        } as AuthResponse,
         { status: 401 }
       );
     }
@@ -40,7 +61,11 @@ export async function POST(request: NextRequest) {
     const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        {
+          success: false,
+          error: 'Invalid credentials',
+          message: 'Invalid email/username or password',
+        } as AuthResponse,
         { status: 401 }
       );
     }
@@ -49,7 +74,8 @@ export async function POST(request: NextRequest) {
     const token = generateToken({
       id: user.id,
       email: user.email,
-      name: user.name,
+      name: user.name || user.username || '',
+      username: user.username,
       role: user.role,
     });
 
@@ -62,15 +88,19 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    // Return user info (without password)
+    // Return user info (without password) - support both old and new response formats
     const response = NextResponse.json({
+      success: true,
+      message: 'Login successful',
+      token, // Include token in response for Bearer auth clients
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
         name: user.name,
         role: user.role,
       },
-    });
+    } as AuthResponse);
 
     response.headers.set('Set-Cookie', cookie);
     return response;
@@ -78,7 +108,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        success: false,
+        error: 'Internal server error',
+        message: 'An error occurred during login',
+      } as AuthResponse,
       { status: 500 }
     );
   }
