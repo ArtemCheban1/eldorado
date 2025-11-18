@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { Project } from '@/types';
+import { requireAuth } from '@/lib/auth-middleware';
 
-// GET /api/projects/[id] - Get a specific project
+// GET /api/projects/[id] - Get a specific project owned by the authenticated user
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireAuth();
+    if (auth.error) {
+      return auth.response;
+    }
+
     const db = await getDatabase();
-    const project = await db.collection<Project>('projects').findOne({ id: params.id });
+    const project = await db
+      .collection<Project>('projects')
+      .findOne({ id: params.id, userId: auth.userId });
 
     if (!project) {
       return NextResponse.json(
@@ -28,12 +36,17 @@ export async function GET(
   }
 }
 
-// PATCH /api/projects/[id] - Update a project
+// PATCH /api/projects/[id] - Update a project owned by the authenticated user
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireAuth();
+    if (auth.error) {
+      return auth.response;
+    }
+
     const body = await request.json();
     const db = await getDatabase();
 
@@ -43,7 +56,7 @@ export async function PATCH(
     };
 
     const result = await db.collection('projects').findOneAndUpdate(
-      { id: params.id },
+      { id: params.id, userId: auth.userId },
       { $set: updateData },
       { returnDocument: 'after' }
     );
@@ -65,19 +78,30 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/projects/[id] - Delete a project
+// DELETE /api/projects/[id] - Delete a project owned by the authenticated user
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireAuth();
+    if (auth.error) {
+      return auth.response;
+    }
+
     const db = await getDatabase();
 
-    // First, delete all sites associated with this project
-    await db.collection('sites').deleteMany({ projectId: params.id });
+    // First, delete all sites associated with this project and owned by the user
+    await db.collection('sites').deleteMany({
+      projectId: params.id,
+      userId: auth.userId
+    });
 
-    // Then delete the project itself
-    const result = await db.collection('projects').deleteOne({ id: params.id });
+    // Then delete the project itself (only if owned by the user)
+    const result = await db.collection('projects').deleteOne({
+      id: params.id,
+      userId: auth.userId
+    });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(

@@ -1,6 +1,19 @@
+export interface User {
+  _id?: string;
+  id: string;
+  email: string;
+  name?: string;
+  image?: string;
+  provider?: string; // 'google', 'facebook', 'github', etc.
+  emailVerified?: Date | string | null;
+  dateCreated?: Date | string;
+  dateUpdated?: Date | string;
+}
+
 export interface ArchaeologicalSite {
   _id?: string;
   id: string;
+  userId: string; // Owner of this site
   projectId: string; // Reference to the project this site belongs to
   name: string;
   coordinates: [number, number]; // [latitude, longitude]
@@ -48,6 +61,7 @@ export interface MapLayer {
 export interface Project {
   _id?: string;
   id: string;
+  userId: string; // Owner of this project
   name: string;
   description?: string;
   layers: MapLayer[];

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useProject } from '@/contexts/ProjectContext';
 import { ProjectManagementModal } from './ProjectManagementModal';
+import AuthButton from './AuthButton';
 
 export function Header() {
   const { projects, activeProject, setActiveProject } = useProject();
@@ -19,6 +20,9 @@ export function Header() {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Authentication */}
+            <AuthButton />
+
             {/* Project Switcher Dropdown */}
             <div className="relative">
               <button

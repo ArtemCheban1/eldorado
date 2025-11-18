@@ -1,11 +1,14 @@
 'use client';
 
 import { ProjectProvider } from '@/contexts/ProjectContext';
+import SessionProvider from '@/components/SessionProvider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ProjectProvider>
-      {children}
-    </ProjectProvider>
+    <SessionProvider>
+      <ProjectProvider>
+        {children}
+      </ProjectProvider>
+    </SessionProvider>
   );
 }

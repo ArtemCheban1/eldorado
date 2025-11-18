@@ -9,11 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/mongodb-adapter": "^3.11.1",
     "@tmcw/togeojson": "^7.1.2",
     "axios": "^1.7.7",
     "leaflet": "^1.9.4",
     "mongodb": "^6.10.0",
     "next": "14.2.18",
+    "next-auth": "^4.24.13",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",

@@ -2,8 +2,8 @@ import { kml } from '@tmcw/togeojson';
 import { DOMParser } from 'xmldom';
 import { ArchaeologicalSite } from '@/types';
 
-// Type for sites before projectId is added
-export type ParsedSite = Omit<ArchaeologicalSite, 'projectId'>;
+// Type for sites before projectId and userId are added
+export type ParsedSite = Omit<ArchaeologicalSite, 'projectId' | 'userId'>;
 
 export interface ParsedKMLData {
   points: ParsedSite[];

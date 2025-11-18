@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { Project } from '@/types';
+import { requireAuth } from '@/lib/auth-middleware';
 
-// GET /api/projects - Get all projects
+// GET /api/projects - Get all projects for the authenticated user
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth();
+    if (auth.error) {
+      return auth.response;
+    }
+
     const db = await getDatabase();
-    const projects = await db.collection<Project>('projects').find({}).toArray();
+    const projects = await db
+      .collection<Project>('projects')
+      .find({ userId: auth.userId })
+      .toArray();
 
     return NextResponse.json({ projects }, { status: 200 });
   } catch (error) {
@@ -18,14 +27,20 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/projects - Create a new project
+// POST /api/projects - Create a new project for the authenticated user
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth();
+    if (auth.error) {
+      return auth.response;
+    }
+
     const body = await request.json();
     const db = await getDatabase();
 
     const newProject: Omit<Project, '_id'> = {
       id: `project_${Date.now()}`,
+      userId: auth.userId, // Assign to authenticated user
       name: body.name,
       description: body.description || '',
       layers: body.layers || [

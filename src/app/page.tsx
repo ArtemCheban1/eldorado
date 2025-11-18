@@ -99,7 +99,7 @@ export default function Home() {
   return (
     <MapLayersProvider>
       <div className="flex flex-col h-screen w-screen overflow-hidden">
-        {/* Header with Project Switcher */}
+        {/* Header with Authentication and Project Switcher */}
         <Header />
 
         {/* Main Content Area */}
