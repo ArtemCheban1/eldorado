@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { ArchaeologicalSite } from '@/types';
+import { withAuth } from '@/lib/middleware';
 
 // GET /api/sites - Get all sites
 export async function GET(request: NextRequest) {
@@ -18,8 +19,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/sites - Create a new site
-export async function POST(request: NextRequest) {
+// POST /api/sites - Create a new site (requires authentication)
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
     const body = await request.json();
     const db = await getDatabase();
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
       ...siteData,
       dateCreated: new Date().toISOString(),
       dateUpdated: new Date().toISOString(),
+      createdBy: user.userId, // Add user who created the site
     };
 
     const result = await db.collection('sites').insertOne(newSite);
@@ -46,4 +48,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -112,3 +112,45 @@ export interface ImportData {
     category?: string;
   };
 }
+
+// Authentication types
+export interface User {
+  _id?: string;
+  id: string;
+  username: string;
+  email: string;
+  password: string; // Hashed password
+  role?: 'admin' | 'researcher' | 'viewer';
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface AuthTokenPayload {
+  userId: string;
+  username: string;
+  email: string;
+  role?: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message: string;
+  token?: string;
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+    role?: string;
+  };
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
