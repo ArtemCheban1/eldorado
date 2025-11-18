@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { ArchaeologicalSite } from '@/types';
 import { ObjectId } from 'mongodb';
+import { getAuthUser } from '@/lib/auth';
 
 // GET /api/sites/[id] - Get a specific site
 export async function GET(
@@ -9,6 +10,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication
+    const user = getAuthUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { id } = params;
 
     if (!ObjectId.isValid(id)) {
@@ -46,6 +56,15 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication
+    const user = getAuthUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { id } = params;
 
     if (!ObjectId.isValid(id)) {
@@ -95,6 +114,15 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication
+    const user = getAuthUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { id } = params;
 
     if (!ObjectId.isValid(id)) {

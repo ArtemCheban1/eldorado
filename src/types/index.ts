@@ -1,13 +1,30 @@
+// User authentication types
 export interface User {
   _id?: string;
   id: string;
   email: string;
+  password?: string; // Hashed password (for email/password auth)
   name?: string;
   image?: string;
-  provider?: string; // 'google', 'facebook', 'github', etc.
+  provider?: string; // 'google', 'facebook', 'github', 'email', etc.
+  role?: 'admin' | 'user';
   emailVerified?: Date | string | null;
   dateCreated?: Date | string;
   dateUpdated?: Date | string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role?: 'admin' | 'user';
+}
+
+export interface JWTPayload {
+  userId: string;
+  email: string;
+  name: string;
+  role?: 'admin' | 'user';
 }
 
 export interface ArchaeologicalSite {
