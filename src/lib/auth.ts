@@ -164,7 +164,7 @@ export function getAuthUser(request: NextRequest): JWTPayload | null {
     if (!token) {
       const cookieHeader = request.headers.get('cookie') || '';
       const cookies = parse(cookieHeader);
-      token = cookies.auth_token;
+      token = cookies.auth_token || null;
     }
 
     if (!token) {

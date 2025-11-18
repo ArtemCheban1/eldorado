@@ -23,11 +23,24 @@ const MapView = dynamic(() => import('@/components/MapView'), {
   ),
 });
 
+const GeoreferenceView = dynamic(() => import('@/components/GeoreferenceView'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading georeference view...</p>
+      </div>
+    </div>
+  ),
+});
+
 export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [georeferencedLayers, setGeoreferencedLayers] = useState<GeoreferencedLayer[]>([]);
   const [showGeoreferencingTool, setShowGeoreferencingTool] = useState(false);
   const [mapClickCallback, setMapClickCallback] = useState<((lat: number, lng: number) => void) | null>(null);
+  const [mode, setMode] = useState<'map' | 'georeference'>('map');
 
   // Load georeferenced layers on mount
   useEffect(() => {
@@ -98,47 +111,55 @@ export default function Home() {
 
   return (
     <MapLayersProvider>
-      <div className="flex flex-col h-screen w-screen overflow-hidden">
-        {/* Header with Authentication and Project Switcher */}
-        <Header />
+      {mode === 'georeference' ? (
+        // Georeference Mode - Full screen split view
+        <GeoreferenceView onBackToMap={() => setMode('map')} />
+      ) : (
+        // Map Mode - Standard layout with header and sidebars
+        <div className="flex flex-col h-screen w-screen overflow-hidden">
+          {/* Header with Authentication and Project Switcher */}
+          <Header />
 
-        {/* Main Content Area */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar - Tools & Navigation */}
-          <LeftSidebar
-            onDataRefresh={handleDataRefresh}
-            georeferencedLayers={georeferencedLayers}
-            onOpenGeoreferencingTool={() => setShowGeoreferencingTool(true)}
-            onLayersUpdate={loadGeoreferencedLayers}
-            onLayerToggle={handleLayerToggle}
-            onLayerOpacityChange={handleLayerOpacityChange}
-          />
-
-          {/* Main Map View */}
-          <main className="flex-1 relative">
-            <MapView
-              refreshTrigger={refreshTrigger}
-              georeferencedLayers={georeferencedLayers.filter(l => l.visible)}
-              onMapClick={handleMapClickEvent}
+          {/* Main Content Area */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left Sidebar - Tools & Navigation */}
+            <LeftSidebar
+              onDataRefresh={handleDataRefresh}
+              georeferencedLayers={georeferencedLayers}
+              onOpenGeoreferencingTool={() => setShowGeoreferencingTool(true)}
+              onLayersUpdate={loadGeoreferencedLayers}
+              onLayerToggle={handleLayerToggle}
+              onLayerOpacityChange={handleLayerOpacityChange}
+              onModeChange={setMode}
+              currentMode={mode}
             />
-          </main>
 
-          {/* Right Sidebar - Details & Information */}
-          <RightSidebar />
+            {/* Main Map View */}
+            <main className="flex-1 relative">
+              <MapView
+                refreshTrigger={refreshTrigger}
+                georeferencedLayers={georeferencedLayers.filter(l => l.visible)}
+                onMapClick={handleMapClickEvent}
+              />
+            </main>
+
+            {/* Right Sidebar - Details & Information */}
+            <RightSidebar />
+          </div>
+
+          {/* Georeferencing Tool Modal */}
+          {showGeoreferencingTool && (
+            <GeoreferencingTool
+              onClose={() => setShowGeoreferencingTool(false)}
+              onSave={(layer) => {
+                setGeoreferencedLayers(prev => [...prev, layer]);
+                setShowGeoreferencingTool(false);
+              }}
+              onMapClick={handleMapClick}
+            />
+          )}
         </div>
-
-        {/* Georeferencing Tool Modal */}
-        {showGeoreferencingTool && (
-          <GeoreferencingTool
-            onClose={() => setShowGeoreferencingTool(false)}
-            onSave={(layer) => {
-              setGeoreferencedLayers(prev => [...prev, layer]);
-              setShowGeoreferencingTool(false);
-            }}
-            onMapClick={handleMapClick}
-          />
-        )}
-      </div>
+      )}
     </MapLayersProvider>
   );
 }

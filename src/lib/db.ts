@@ -34,3 +34,9 @@ export async function getDatabase(): Promise<Db> {
   const client = await clientPromise;
   return client.db('eldorado');
 }
+
+// Alias for compatibility with auth routes
+export async function connectToDatabase(): Promise<{ db: Db }> {
+  const db = await getDatabase();
+  return { db };
+}

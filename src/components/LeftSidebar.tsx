@@ -15,6 +15,8 @@ interface LeftSidebarProps {
   onLayersUpdate: () => void;
   onLayerToggle: (layerId: string, visible: boolean) => void;
   onLayerOpacityChange: (layerId: string, opacity: number) => void;
+  onModeChange?: (mode: 'map' | 'georeference') => void;
+  currentMode?: 'map' | 'georeference';
 }
 
 export default function LeftSidebar({
@@ -23,7 +25,9 @@ export default function LeftSidebar({
   onOpenGeoreferencingTool,
   onLayersUpdate,
   onLayerToggle,
-  onLayerOpacityChange
+  onLayerOpacityChange,
+  onModeChange,
+  currentMode = 'map'
 }: LeftSidebarProps) {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -63,8 +67,37 @@ export default function LeftSidebar({
         </button>
       </div>
 
+      {/* Mode Selector */}
+      {isExpanded && onModeChange && (
+        <div className="p-4 border-b border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3">Mode</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onModeChange('map')}
+              className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+                currentMode === 'map'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              Map View
+            </button>
+            <button
+              onClick={() => onModeChange('georeference')}
+              className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+                currentMode === 'georeference'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              Georeference
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tools Section */}
-      {isExpanded && (
+      {isExpanded && currentMode === 'map' && (
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3">Tools</h3>

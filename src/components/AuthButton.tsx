@@ -10,13 +10,6 @@ const hasGoogleProvider = typeof window !== 'undefined' && process.env.NEXT_PUBL
 const hasFacebookProvider = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID;
 const hasGitHubProvider = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
 
-const availableProviders = [
-  'credentials', // Always available
-  'google',      // Show all by default - NextAuth will handle if not configured
-  'facebook',
-  'github',
-];
-
 // For client-side, we'll show all providers and let NextAuth handle which are configured
 const availableProviders = ['google', 'facebook', 'github'];
 
