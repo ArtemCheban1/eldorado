@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
-import { ArchaeologicalSite } from '@/types';
+import { Header } from '@/components/Header';
 import LeftSidebar from '@/components/LeftSidebar';
 import RightSidebar from '@/components/RightSidebar';
-import FilterPanel from '@/components/FilterPanel';
+import GeoreferencingTool from '@/components/GeoreferencingTool';
+import { MapLayersProvider } from '@/context/MapLayersContext';
+import { GeoreferencedLayer } from '@/types';
 
 // Dynamic import to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import('@/components/MapView'), {
@@ -22,55 +24,121 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 });
 
 export default function Home() {
-  const [allSites, setAllSites] = useState<ArchaeologicalSite[]>([]);
-  const [filteredSites, setFilteredSites] = useState<ArchaeologicalSite[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [georeferencedLayers, setGeoreferencedLayers] = useState<GeoreferencedLayer[]>([]);
+  const [showGeoreferencingTool, setShowGeoreferencingTool] = useState(false);
+  const [mapClickCallback, setMapClickCallback] = useState<((lat: number, lng: number) => void) | null>(null);
 
-  // Fetch sites from API
-  const fetchSites = useCallback(async () => {
-    try {
-      const response = await axios.get('/api/sites');
-      const sites = response.data.sites || [];
-      setAllSites(sites);
-      setFilteredSites(sites);
-    } catch (error) {
-      console.error('Error fetching sites:', error);
-      setAllSites([]);
-      setFilteredSites([]);
-    }
+  // Load georeferenced layers on mount
+  useEffect(() => {
+    loadGeoreferencedLayers();
   }, []);
 
-  useEffect(() => {
-    fetchSites();
-  }, [fetchSites]);
+  const loadGeoreferencedLayers = async () => {
+    try {
+      const response = await axios.get('/api/georeferenced-layers');
+      setGeoreferencedLayers(response.data.layers || []);
+    } catch (error) {
+      console.error('Failed to load georeferenced layers:', error);
+    }
+  };
+
+  const handleDataRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleLayerToggle = (layerId: string, visible: boolean) => {
+    setGeoreferencedLayers(prev =>
+      prev.map(layer =>
+        layer.id === layerId ? { ...layer, visible } : layer
+      )
+    );
+
+    // Also update in backend
+    const layer = georeferencedLayers.find(l => l.id === layerId);
+    if (layer) {
+      axios.put(`/api/georeferenced-layers/${layerId}`, {
+        ...layer,
+        visible
+      }).catch(error => {
+        console.error('Failed to update layer visibility:', error);
+      });
+    }
+  };
+
+  const handleLayerOpacityChange = (layerId: string, opacity: number) => {
+    setGeoreferencedLayers(prev =>
+      prev.map(layer =>
+        layer.id === layerId ? { ...layer, opacity } : layer
+      )
+    );
+
+    // Also update in backend
+    const layer = georeferencedLayers.find(l => l.id === layerId);
+    if (layer) {
+      axios.put(`/api/georeferenced-layers/${layerId}`, {
+        ...layer,
+        opacity
+      }).catch(error => {
+        console.error('Failed to update layer opacity:', error);
+      });
+    }
+  };
+
+  const handleMapClick = useCallback((callback: (lat: number, lng: number) => void) => {
+    setMapClickCallback(() => callback);
+  }, []);
+
+  const handleMapClickEvent = useCallback((lat: number, lng: number) => {
+    if (mapClickCallback) {
+      mapClickCallback(lat, lng);
+      setMapClickCallback(null);
+    }
+  }, [mapClickCallback]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* Left Sidebar - Tools & Navigation */}
-      <LeftSidebar onShowFilters={() => setShowFilters(!showFilters)} />
+    <MapLayersProvider>
+      <div className="flex flex-col h-screen w-screen overflow-hidden">
+        {/* Header with Authentication and Project Switcher */}
+        <Header />
 
-      {/* Filter Panel Overlay */}
-      {showFilters && (
-        <div className="fixed left-20 top-4 bottom-4 w-80 z-[1000] overflow-hidden">
-          <FilterPanel sites={allSites} onFilteredSitesChange={setFilteredSites} />
-          <button
-            onClick={() => setShowFilters(false)}
-            className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-lg hover:bg-gray-100"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        {/* Main Content Area */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Sidebar - Tools & Navigation */}
+          <LeftSidebar
+            onDataRefresh={handleDataRefresh}
+            georeferencedLayers={georeferencedLayers}
+            onOpenGeoreferencingTool={() => setShowGeoreferencingTool(true)}
+            onLayersUpdate={loadGeoreferencedLayers}
+            onLayerToggle={handleLayerToggle}
+            onLayerOpacityChange={handleLayerOpacityChange}
+          />
+
+          {/* Main Map View */}
+          <main className="flex-1 relative">
+            <MapView
+              refreshTrigger={refreshTrigger}
+              georeferencedLayers={georeferencedLayers.filter(l => l.visible)}
+              onMapClick={handleMapClickEvent}
+            />
+          </main>
+
+          {/* Right Sidebar - Details & Information */}
+          <RightSidebar />
         </div>
-      )}
 
-      {/* Main Map View */}
-      <main className="flex-1 relative">
-        <MapView key={filteredSites.length} sites={filteredSites} onSitesChange={fetchSites} />
-      </main>
-
-      {/* Right Sidebar - Details & Information */}
-      <RightSidebar />
-    </div>
+        {/* Georeferencing Tool Modal */}
+        {showGeoreferencingTool && (
+          <GeoreferencingTool
+            onClose={() => setShowGeoreferencingTool(false)}
+            onSave={(layer) => {
+              setGeoreferencedLayers(prev => [...prev, layer]);
+              setShowGeoreferencingTool(false);
+            }}
+            onMapClick={handleMapClick}
+          />
+        )}
+      </div>
+    </MapLayersProvider>
   );
 }

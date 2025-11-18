@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "El Dorado - Archaeological Map Management",
@@ -15,9 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <AuthProvider>
+        <Providers>
           {children}
-        </AuthProvider>
+        </Providers>
       </body>
     </html>
   );
