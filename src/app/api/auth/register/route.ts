@@ -1,137 +1,159 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/db';
-import {
-  hashPassword,
-  generateToken,
-  validateEmail,
-  validateUsername,
-  validatePassword,
-} from '@/lib/auth';
-import { RegisterRequest, AuthResponse, User } from '@/types';
+import { connectToDatabase } from '@/lib/db';
+import { User, AuthResponse } from '@/types';
+import { hashPassword, isValidEmail, isValidPassword, validatePassword, validateUsername, generateToken } from '@/lib/auth';
+import { serialize } from 'cookie';
 
 export async function POST(request: NextRequest) {
   try {
-    const body: RegisterRequest = await request.json();
-    const { username, email, password } = body;
+    const body = await request.json();
+    const { email, password, name, username } = body;
 
     // Validate input
-    if (!username || !email || !password) {
+    if (!email || !password) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Username, email, and password are required',
+          error: 'Email and password are required',
+          message: 'Email and password are required',
         } as AuthResponse,
         { status: 400 }
       );
     }
 
-    // Validate username
-    const usernameValidation = validateUsername(username);
-    if (!usernameValidation.valid) {
+    if (!isValidEmail(email)) {
       return NextResponse.json(
         {
           success: false,
-          message: usernameValidation.error,
-        } as AuthResponse,
-        { status: 400 }
-      );
-    }
-
-    // Validate email
-    if (!validateEmail(email)) {
-      return NextResponse.json(
-        {
-          success: false,
+          error: 'Invalid email format',
           message: 'Invalid email format',
         } as AuthResponse,
         { status: 400 }
       );
     }
 
-    // Validate password
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
+    // Use stronger password validation if available
+    if (!isValidPassword(password)) {
+      const strongValidation = validatePassword(password);
       return NextResponse.json(
         {
           success: false,
-          message: passwordValidation.error,
+          error: strongValidation.error || 'Password must be at least 6 characters long',
+          message: strongValidation.error || 'Password must be at least 6 characters long',
         } as AuthResponse,
         { status: 400 }
       );
     }
 
+    // Validate username if provided
+    if (username) {
+      const usernameValidation = validateUsername(username);
+      if (!usernameValidation.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: usernameValidation.error,
+            message: usernameValidation.error,
+          } as AuthResponse,
+          { status: 400 }
+        );
+      }
+    }
+
     // Connect to database
-    const db = await getDatabase();
+    const { db } = await connectToDatabase();
     const usersCollection = db.collection<User>('users');
 
-    // Check if username already exists
-    const existingUsername = await usersCollection.findOne({ username });
-    if (existingUsername) {
+    // Check if user already exists (by email)
+    const existingUserByEmail = await usersCollection.findOne({ email: email.toLowerCase() });
+    if (existingUserByEmail) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Username already exists',
+          error: 'User with this email already exists',
+          message: 'User with this email already exists',
         } as AuthResponse,
-        { status: 409 }
+        { status: 400 }
       );
     }
 
-    // Check if email already exists
-    const existingEmail = await usersCollection.findOne({ email });
-    if (existingEmail) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Email already exists',
-        } as AuthResponse,
-        { status: 409 }
-      );
+    // Check if username already exists (if username provided)
+    if (username) {
+      const existingUserByUsername = await usersCollection.findOne({ username });
+      if (existingUserByUsername) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Username already exists',
+            message: 'Username already exists',
+          } as AuthResponse,
+          { status: 409 }
+        );
+      }
     }
 
-    // Hash password
+    // Hash password and create user
     const hashedPassword = await hashPassword(password);
+    const now = new Date();
+    const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(7);
 
-    // Create user
-    const newUser: Omit<User, '_id'> = {
-      id: crypto.randomUUID(),
-      username,
-      email,
+    const newUser: User = {
+      id: userId,
+      email: email.toLowerCase(),
+      username: username || undefined,
       password: hashedPassword,
-      role: 'researcher', // Default role
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      name: name || username || email.split('@')[0],
+      role: 'user',
+      provider: 'email',
+      dateCreated: now,
+      dateUpdated: now,
+      createdAt: now,
+      updatedAt: now,
     };
 
-    const result = await usersCollection.insertOne(newUser as User);
+    await usersCollection.insertOne(newUser);
 
     // Generate JWT token
     const token = generateToken({
-      userId: newUser.id,
-      username: newUser.username,
+      id: newUser.id,
       email: newUser.email,
+      name: newUser.name || '',
+      username: newUser.username,
       role: newUser.role,
     });
 
-    // Return success response with token
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'User registered successfully',
-        token,
-        user: {
-          id: newUser.id,
-          username: newUser.username,
-          email: newUser.email,
-          role: newUser.role,
-        },
-      } as AuthResponse,
-      { status: 201 }
-    );
+    // Set cookie
+    const cookie = serialize('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    // Return user info (without password) - support both old and new response formats
+    const response = NextResponse.json({
+      success: true,
+      message: 'User registered successfully',
+      token, // Include token in response for Bearer auth clients
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        username: newUser.username,
+        name: newUser.name,
+        role: newUser.role,
+      },
+    } as AuthResponse, { status: 201 });
+
+    response.headers.set('Set-Cookie', cookie);
+    return response;
+
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
       {
         success: false,
+        error: 'Internal server error',
         message: 'An error occurred during registration',
       } as AuthResponse,
       { status: 500 }

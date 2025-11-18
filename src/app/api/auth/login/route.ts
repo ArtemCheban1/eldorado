@@ -1,49 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/db';
-import { comparePassword, generateToken } from '@/lib/auth';
-import { LoginRequest, AuthResponse, User } from '@/types';
+import { connectToDatabase } from '@/lib/db';
+import { User, AuthResponse } from '@/types';
+import { comparePassword, generateToken, isValidEmail } from '@/lib/auth';
+import { serialize } from 'cookie';
 
 export async function POST(request: NextRequest) {
   try {
-    const body: LoginRequest = await request.json();
-    const { username, password } = body;
+    const body = await request.json();
+    const { email, username, password } = body;
 
-    // Validate input
-    if (!username || !password) {
+    // Validate input - require either email or username, plus password
+    if ((!email && !username) || !password) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Username and password are required',
+          error: 'Email or username and password are required',
+          message: 'Email or username and password are required',
+        } as AuthResponse,
+        { status: 400 }
+      );
+    }
+
+    // Validate email format if provided
+    if (email && !isValidEmail(email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid email format',
+          message: 'Invalid email format',
         } as AuthResponse,
         { status: 400 }
       );
     }
 
     // Connect to database
-    const db = await getDatabase();
+    const { db } = await connectToDatabase();
     const usersCollection = db.collection<User>('users');
 
-    // Find user by username
-    const user = await usersCollection.findOne({ username });
+    // Find user by email or username
+    let user: User | null = null;
 
-    if (!user) {
+    if (email) {
+      user = await usersCollection.findOne({ email: email.toLowerCase() });
+    } else if (username) {
+      user = await usersCollection.findOne({ username });
+    }
+
+    if (!user || !user.password) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Invalid username or password',
+          error: 'Invalid credentials',
+          message: 'Invalid email/username or password',
         } as AuthResponse,
         { status: 401 }
       );
     }
 
-    // Compare passwords
-    const passwordMatch = await comparePassword(password, user.password);
-
-    if (!passwordMatch) {
+    // Verify password
+    const isPasswordValid = await comparePassword(password, user.password);
+    if (!isPasswordValid) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Invalid username or password',
+          error: 'Invalid credentials',
+          message: 'Invalid email/username or password',
         } as AuthResponse,
         { status: 401 }
       );
@@ -51,32 +72,45 @@ export async function POST(request: NextRequest) {
 
     // Generate JWT token
     const token = generateToken({
-      userId: user.id,
-      username: user.username,
+      id: user.id,
       email: user.email,
+      name: user.name || user.username || '',
+      username: user.username,
       role: user.role,
     });
 
-    // Return success response with token
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Login successful',
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-        },
-      } as AuthResponse,
-      { status: 200 }
-    );
+    // Set cookie
+    const cookie = serialize('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    // Return user info (without password) - support both old and new response formats
+    const response = NextResponse.json({
+      success: true,
+      message: 'Login successful',
+      token, // Include token in response for Bearer auth clients
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+      },
+    } as AuthResponse);
+
+    response.headers.set('Set-Cookie', cookie);
+    return response;
+
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
       {
         success: false,
+        error: 'Internal server error',
         message: 'An error occurred during login',
       } as AuthResponse,
       { status: 500 }

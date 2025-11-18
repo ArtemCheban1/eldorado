@@ -1,40 +1,51 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { AuthTokenPayload } from '@/types';
+import { JWTPayload, AuthUser } from '@/types';
+import { NextRequest } from 'next/server';
+import { parse } from 'cookie';
+import { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import FacebookProvider from "next-auth/providers/facebook";
+import GitHubProvider from "next-auth/providers/github";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import clientPromise from "./mongodb-client";
 
-// Get JWT secret from environment variable
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'; // Default: 7 days
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_EXPIRES_IN = '7d'; // Token expires in 7 days
+
+// ============================================================================
+// Email/Password Authentication Functions
+// ============================================================================
 
 /**
  * Hash a password using bcrypt
- * @param password - Plain text password
- * @returns Hashed password
  */
 export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 10;
-  return await bcrypt.hash(password, saltRounds);
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
 }
 
 /**
  * Compare a plain text password with a hashed password
- * @param password - Plain text password
- * @param hashedPassword - Hashed password
- * @returns True if passwords match, false otherwise
  */
 export async function comparePassword(
   password: string,
   hashedPassword: string
 ): Promise<boolean> {
-  return await bcrypt.compare(password, hashedPassword);
+  return bcrypt.compare(password, hashedPassword);
 }
 
 /**
  * Generate a JWT token for a user
- * @param payload - Token payload containing user information
- * @returns JWT token string
  */
-export function generateToken(payload: AuthTokenPayload): string {
+export function generateToken(user: AuthUser): string {
+  const payload: JWTPayload = {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  };
+
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
@@ -42,42 +53,34 @@ export function generateToken(payload: AuthTokenPayload): string {
 
 /**
  * Verify and decode a JWT token
- * @param token - JWT token string
- * @returns Decoded token payload or null if invalid
  */
-export function verifyToken(token: string): AuthTokenPayload | null {
+export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
-    return decoded;
+    return jwt.verify(token, JWT_SECRET) as JWTPayload;
   } catch (error) {
-    console.error('Token verification failed:', error);
     return null;
   }
 }
 
 /**
- * Extract token from Authorization header
- * @param authHeader - Authorization header value
- * @returns Token string or null
+ * Validate email format
  */
-export function extractTokenFromHeader(authHeader: string | null): string | null {
-  if (!authHeader) {
-    return null;
-  }
-
-  // Expected format: "Bearer <token>"
-  const parts = authHeader.split(' ');
-  if (parts.length === 2 && parts[0] === 'Bearer') {
-    return parts[1];
-  }
-
-  return null;
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
 /**
  * Validate password strength
- * @param password - Plain text password
- * @returns Object with valid flag and error message if invalid
+ * At least 8 characters with uppercase, lowercase, and number
+ */
+export function isValidPassword(password: string): boolean {
+  return password.length >= 6;
+}
+
+/**
+ * Strong password validation
+ * At least 8 characters with uppercase, lowercase, and number
  */
 export function validatePassword(password: string): { valid: boolean; error?: string } {
   if (password.length < 8) {
@@ -100,19 +103,7 @@ export function validatePassword(password: string): { valid: boolean; error?: st
 }
 
 /**
- * Validate email format
- * @param email - Email address
- * @returns True if valid email format, false otherwise
- */
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-/**
  * Validate username format
- * @param username - Username
- * @returns Object with valid flag and error message if invalid
  */
 export function validateUsername(username: string): { valid: boolean; error?: string } {
   if (username.length < 3) {
@@ -132,3 +123,115 @@ export function validateUsername(username: string): { valid: boolean; error?: st
 
   return { valid: true };
 }
+
+/**
+ * Alias for email validation
+ */
+export function validateEmail(email: string): boolean {
+  return isValidEmail(email);
+}
+
+/**
+ * Extract token from Authorization header
+ */
+export function extractTokenFromHeader(authHeader: string | null): string | null {
+  if (!authHeader) {
+    return null;
+  }
+
+  // Expected format: "Bearer <token>"
+  const parts = authHeader.split(' ');
+  if (parts.length === 2 && parts[0] === 'Bearer') {
+    return parts[1];
+  }
+
+  return null;
+}
+
+/**
+ * Get authenticated user from request
+ * Supports both cookie-based and header-based authentication
+ * Returns the JWT payload if authenticated, null otherwise
+ */
+export function getAuthUser(request: NextRequest): JWTPayload | null {
+  try {
+    // Try to get token from Authorization header first
+    const authHeader = request.headers.get('authorization');
+    let token = extractTokenFromHeader(authHeader);
+
+    // Fall back to cookie if no header token
+    if (!token) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const cookies = parse(cookieHeader);
+      token = cookies.auth_token;
+    }
+
+    if (!token) {
+      return null;
+    }
+
+    return verifyToken(token);
+  } catch (error) {
+    return null;
+  }
+}
+
+// ============================================================================
+// NextAuth Configuration (Social Authentication)
+// ============================================================================
+
+export const authOptions: NextAuthOptions = {
+  adapter: MongoDBAdapter(clientPromise) as any,
+  providers: [
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        })]
+      : []),
+    ...(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
+      ? [FacebookProvider({
+          clientId: process.env.FACEBOOK_CLIENT_ID,
+          clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+        })]
+      : []),
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+      ? [GitHubProvider({
+          clientId: process.env.GITHUB_CLIENT_ID,
+          clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        })]
+      : []),
+  ],
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: "/",
+    error: "/",
+  },
+  callbacks: {
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email || "";
+        token.name = user.name || "";
+        token.image = user.image || "";
+      }
+      if (account) {
+        token.provider = account.provider;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.image = token.image as string;
+        (session.user as any).provider = token.provider;
+      }
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+};
