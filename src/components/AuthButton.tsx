@@ -3,6 +3,9 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useState } from "react";
 
+// For client-side, we'll show all providers and let NextAuth handle which are configured
+const availableProviders = ['google', 'facebook', 'github'];
+
 export default function AuthButton() {
   const { data: session, status } = useSession();
   const [showProviders, setShowProviders] = useState(false);
@@ -91,7 +94,6 @@ export default function AuthButton() {
                   <span className="font-medium">Google</span>
                 </button>
               )}
-
               {availableProviders.includes('facebook') && (
                 <button
                   onClick={() => {
@@ -106,7 +108,6 @@ export default function AuthButton() {
                   <span className="font-medium">Facebook</span>
                 </button>
               )}
-
               {availableProviders.includes('github') && (
                 <button
                   onClick={() => {
