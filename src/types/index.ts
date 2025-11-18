@@ -112,3 +112,29 @@ export interface ImportData {
     category?: string;
   };
 }
+
+// User authentication types
+export interface User {
+  _id?: string;
+  id: string;
+  email: string;
+  password: string; // Hashed password
+  name: string;
+  role?: 'admin' | 'user';
+  dateCreated: Date | string;
+  dateUpdated: Date | string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role?: 'admin' | 'user';
+}
+
+export interface JWTPayload {
+  userId: string;
+  email: string;
+  name: string;
+  role?: 'admin' | 'user';
+}
