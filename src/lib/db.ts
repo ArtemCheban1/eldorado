@@ -2,7 +2,11 @@ import { MongoClient, Db } from 'mongodb';
 
 // Allow build to succeed without MongoDB URI
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const options = {};
+const options = {
+  serverSelectionTimeoutMS: 30000,
+  connectTimeoutMS: 30000,
+  socketTimeoutMS: 30000,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
