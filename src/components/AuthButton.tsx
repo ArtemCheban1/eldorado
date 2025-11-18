@@ -2,6 +2,20 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+// Available providers - credentials is always available
+// Social providers are checked at runtime
+const hasGoogleProvider = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const hasFacebookProvider = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID;
+const hasGitHubProvider = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+
+const availableProviders = [
+  'credentials', // Always available
+  'google',      // Show all by default - NextAuth will handle if not configured
+  'facebook',
+  'github',
+];
 
 // For client-side, we'll show all providers and let NextAuth handle which are configured
 const availableProviders = ['google', 'facebook', 'github'];
@@ -9,6 +23,7 @@ const availableProviders = ['google', 'facebook', 'github'];
 export default function AuthButton() {
   const { data: session, status } = useSession();
   const [showProviders, setShowProviders] = useState(false);
+  const router = useRouter();
 
   if (status === "loading") {
     return (
@@ -58,13 +73,21 @@ export default function AuthButton() {
 
       {showProviders && (
         <div className="absolute top-full mt-2 right-0 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-2 min-w-[200px] z-50">
-          {availableProviders.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-400 text-center">
-              <p className="mb-2">No authentication providers configured.</p>
-              <p className="text-xs">Add OAuth credentials to .env.local</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
+              {/* Email and Password Login */}
+              <button
+                onClick={() => {
+                  router.push("/login");
+                  setShowProviders(false);
+                }}
+                className="flex items-center gap-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span className="font-medium">Email / Password</span>
+              </button>
+
               {availableProviders.includes('google') && (
                 <button
                   onClick={() => {
@@ -123,7 +146,6 @@ export default function AuthButton() {
                 </button>
               )}
             </div>
-          )}
         </div>
       )}
     </div>

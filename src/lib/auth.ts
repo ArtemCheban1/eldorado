@@ -7,6 +7,7 @@ import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import GitHubProvider from "next-auth/providers/github";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "./mongodb-client";
 
@@ -183,6 +184,58 @@ export function getAuthUser(request: NextRequest): JWTPayload | null {
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise) as any,
   providers: [
+    CredentialsProvider({
+      id: "credentials",
+      name: "Email and Password",
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "your@email.com" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Please enter your email and password");
+        }
+
+        try {
+          const client = await clientPromise;
+          const db = client.db();
+
+          // Find user by email or username
+          const user = await db.collection('users').findOne({
+            $or: [
+              { email: credentials.email },
+              { username: credentials.email }
+            ]
+          });
+
+          if (!user) {
+            throw new Error("No user found with this email");
+          }
+
+          // Check if user has a password (not OAuth-only user)
+          if (!user.password) {
+            throw new Error("Please sign in with your OAuth provider");
+          }
+
+          // Verify password
+          const isValid = await comparePassword(credentials.password, user.password);
+
+          if (!isValid) {
+            throw new Error("Invalid password");
+          }
+
+          // Return user object
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name || user.username || user.email,
+            image: user.image || null,
+          };
+        } catch (error: any) {
+          throw new Error(error.message || "Authentication failed");
+        }
+      }
+    }),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [GoogleProvider({
           clientId: process.env.GOOGLE_CLIENT_ID,
@@ -220,6 +273,10 @@ export const authOptions: NextAuthOptions = {
       if (account) {
         token.provider = account.provider;
       }
+      // For credentials provider, set provider to 'credentials'
+      if (!token.provider && user) {
+        token.provider = 'credentials';
+      }
       return token;
     },
     async session({ session, token }) {
@@ -228,7 +285,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email as string;
         session.user.name = token.name as string;
         session.user.image = token.image as string;
-        (session.user as any).provider = token.provider;
+        (session.user as any).provider = token.provider || 'credentials';
       }
       return session;
     },
