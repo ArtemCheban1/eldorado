@@ -1,11 +1,12 @@
 import { MongoClient, Db } from 'mongodb';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MongoDB URI to .env.local');
-}
-
-const uri = process.env.MONGODB_URI;
-const options = {};
+// Allow build to succeed without MongoDB URI
+const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const options = {
+  serverSelectionTimeoutMS: 30000,
+  connectTimeoutMS: 30000,
+  socketTimeoutMS: 30000,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { ArchaeologicalSite } from '@/types';
 import { ObjectId } from 'mongodb';
+import { withAuth } from '@/lib/middleware';
 
 // GET /api/sites/[id] - Get a specific site
 export async function GET(
@@ -40,11 +41,11 @@ export async function GET(
   }
 }
 
-// PUT /api/sites/[id] - Update a site
-export async function PUT(
+// PUT /api/sites/[id] - Update a site (requires authentication)
+export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  { params, user }
+) => {
   try {
     const { id } = params;
 
@@ -64,6 +65,7 @@ export async function PUT(
     const updatedSite = {
       ...updateData,
       dateUpdated: new Date().toISOString(),
+      updatedBy: user.userId, // Add user who updated the site
     };
 
     const result = await db.collection('sites').findOneAndUpdate(
@@ -87,13 +89,13 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});
 
-// DELETE /api/sites/[id] - Delete a site
-export async function DELETE(
+// DELETE /api/sites/[id] - Delete a site (requires authentication)
+export const DELETE = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  { params, user }
+) => {
   try {
     const { id } = params;
 
@@ -127,4 +129,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});
