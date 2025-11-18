@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArchaeologicalSite, PointerType } from '@/types';
+import { ArchaeologicalSite, PointerType, GeoreferencedLayer } from '@/types';
 import PointerForm from './PointerForm';
+import GeoreferencedImageOverlay from './GeoreferencedImageOverlay';
 import axios from 'axios';
 
 // Fix for default marker icons in React-Leaflet
@@ -57,9 +58,87 @@ export default function MapView({ sites, onSitesChange }: MapViewProps) {
   const [selectedPointer, setSelectedPointer] = useState<ArchaeologicalSite | null>(null);
   const [clickedCoordinates, setClickedCoordinates] = useState<[number, number] | null>(null);
   const [isAddMode, setIsAddMode] = useState(true); // Toggle to enable/disable adding pointers
+  const [georeferencedLayers, setGeoreferencedLayers] = useState<GeoreferencedLayer[]>([]);
+  const [showLayersPanel, setShowLayersPanel] = useState(false);
 
   // Default center (you can change this)
   const defaultCenter: [number, number] = [41.9028, 12.4964]; // Rome, Italy
+
+  // Fetch georeferenced layers
+  const fetchLayers = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/layers');
+      const layers = response.data.layers || [];
+      setGeoreferencedLayers(layers);
+    } catch (error) {
+      console.error('Error fetching layers:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLayers();
+  }, [fetchLayers]);
+
+  const toggleLayerVisibility = async (layerId: string) => {
+    const layer = georeferencedLayers.find(l => l.id === layerId || l._id === layerId);
+    if (!layer) return;
+
+    const updatedEnabled = !layer.enabled;
+
+    try {
+      await axios.put(`/api/layers/${layer._id || layer.id}`, {
+        enabled: updatedEnabled,
+      });
+
+      setGeoreferencedLayers(prev =>
+        prev.map(l =>
+          (l.id === layerId || l._id === layerId)
+            ? { ...l, enabled: updatedEnabled }
+            : l
+        )
+      );
+    } catch (error) {
+      console.error('Error updating layer:', error);
+    }
+  };
+
+  const updateLayerOpacity = async (layerId: string, opacity: number) => {
+    const layer = georeferencedLayers.find(l => l.id === layerId || l._id === layerId);
+    if (!layer) return;
+
+    try {
+      await axios.put(`/api/layers/${layer._id || layer.id}`, {
+        opacity,
+      });
+
+      setGeoreferencedLayers(prev =>
+        prev.map(l =>
+          (l.id === layerId || l._id === layerId)
+            ? { ...l, opacity }
+            : l
+        )
+      );
+    } catch (error) {
+      console.error('Error updating layer opacity:', error);
+    }
+  };
+
+  const deleteLayer = async (layerId: string) => {
+    if (!confirm('Are you sure you want to delete this layer?')) return;
+
+    const layer = georeferencedLayers.find(l => l.id === layerId || l._id === layerId);
+    if (!layer) return;
+
+    try {
+      await axios.delete(`/api/layers/${layer._id || layer.id}`);
+      setGeoreferencedLayers(prev =>
+        prev.filter(l => l.id !== layerId && l._id !== layerId)
+      );
+    } catch (error) {
+      console.error('Error deleting layer:', error);
+      alert('Failed to delete layer');
+    }
+  };
 
   const handleMapClick = (lat: number, lng: number) => {
     if (isAddMode) {
@@ -134,20 +213,123 @@ export default function MapView({ sites, onSitesChange }: MapViewProps) {
   return (
     <>
       <div className="h-full w-full relative">
-        {/* Add Mode Toggle */}
-        <div className="absolute top-4 right-4 z-[1000] bg-white rounded-lg shadow-lg p-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isAddMode}
-              onChange={(e) => setIsAddMode(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <span className="text-sm font-medium">
-              {isAddMode ? 'Click to Add Pointers' : 'View Only Mode'}
-            </span>
-          </label>
+        {/* Control Panel */}
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+          {/* Add Mode Toggle */}
+          <div className="bg-white rounded-lg shadow-lg p-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAddMode}
+                onChange={(e) => setIsAddMode(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">
+                {isAddMode ? 'Click to Add Pointers' : 'View Only Mode'}
+              </span>
+            </label>
+          </div>
+
+          {/* Layers Toggle */}
+          <button
+            onClick={() => setShowLayersPanel(!showLayersPanel)}
+            className="bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
+            </svg>
+            <span className="text-sm font-medium">Layers ({georeferencedLayers.length})</span>
+          </button>
         </div>
+
+        {/* Layers Panel */}
+        {showLayersPanel && (
+          <div className="absolute top-4 right-4 mt-32 z-[1000] w-80 bg-white rounded-lg shadow-xl max-h-96 overflow-hidden flex flex-col">
+            <div className="bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
+              <h3 className="font-semibold">Georeferenced Layers</h3>
+              <button
+                onClick={() => setShowLayersPanel(false)}
+                className="text-white hover:text-gray-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {georeferencedLayers.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <p className="text-sm">No georeferenced layers yet</p>
+                  <a
+                    href="/georeferencing"
+                    className="mt-4 inline-block text-blue-600 hover:text-blue-700 text-sm"
+                  >
+                    Create your first layer →
+                  </a>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {georeferencedLayers.map((layer) => (
+                    <div
+                      key={layer._id || layer.id}
+                      className="border rounded-lg p-3 bg-gray-50"
+                    >
+                      <div className="flex items-start gap-2 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={layer.enabled}
+                          onChange={() => toggleLayerVisibility(layer._id || layer.id)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{layer.name}</div>
+                          {layer.description && (
+                            <div className="text-xs text-gray-600 truncate">{layer.description}</div>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {layer.controlPoints.length} control points
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteLayer(layer._id || layer.id)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Delete layer"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {layer.enabled && (
+                        <div className="mt-2">
+                          <label className="text-xs text-gray-600 block mb-1">
+                            Opacity: {Math.round((layer.opacity || 0.7) * 100)}%
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={(layer.opacity || 0.7) * 100}
+                            onChange={(e) =>
+                              updateLayerOpacity(
+                                layer._id || layer.id,
+                                parseInt(e.target.value) / 100
+                              )
+                            }
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
 
         <MapContainer
           center={defaultCenter}
@@ -161,6 +343,16 @@ export default function MapView({ sites, onSitesChange }: MapViewProps) {
           />
 
           <MapClickHandler onMapClick={handleMapClick} />
+
+          {/* Render georeferenced image overlays */}
+          {georeferencedLayers
+            .filter(layer => layer.enabled)
+            .map((layer) => (
+              <GeoreferencedImageOverlay
+                key={layer._id || layer.id}
+                layer={layer}
+              />
+            ))}
 
           {sites.map((site) => {
             const color = getColor(site.type);

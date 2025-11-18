@@ -80,6 +80,26 @@ export interface Photo {
   tags?: string[];
 }
 
+export interface ControlPoint {
+  imageCoords: [number, number]; // [x, y] coordinates on the image
+  mapCoords: [number, number];   // [latitude, longitude] on the map
+}
+
+export interface GeoreferencedLayer {
+  _id?: string;
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  controlPoints: ControlPoint[];
+  bounds?: [[number, number], [number, number]]; // [[south, west], [north, east]]
+  opacity?: number;
+  enabled: boolean;
+  dateCreated: Date | string;
+  dateUpdated: Date | string;
+}
+
 export interface MapLayer {
   id: string;
   name: string;
