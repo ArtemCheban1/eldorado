@@ -4,12 +4,14 @@ A modern web application for managing archaeological sites, findings, and points
 
 ## 🗺️ Features
 
+- **User Authentication**: Secure login with Google, Facebook, and GitHub OAuth
 - **Interactive Map Interface**: Full-screen map with customizable layers
 - **Multiple Map Providers**: Support for OpenStreetMap, Google Maps, Apple Maps, and historical overlays
 - **Archaeological Site Management**:
   - Mark areas with customizable radiuses
   - Categorize sites (archaeological areas, findings, points of interest)
   - Store detailed descriptions and metadata
+  - User-specific data isolation (your data is private)
 - **Photo Management**: Upload and organize photos for each site
 - **Data Import/Export**: Support for GeoJSON, KML, CSV, and GPX formats
 - **Responsive Design**: Works on desktop and mobile devices
@@ -17,6 +19,7 @@ A modern web application for managing archaeological sites, findings, and points
 ## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 14 (React 18) + TypeScript
+- **Authentication**: NextAuth.js with OAuth providers (Google, Facebook, GitHub)
 - **Styling**: Tailwind CSS
 - **Maps**: Leaflet + React-Leaflet
 - **Database**: MongoDB Atlas
@@ -58,14 +61,55 @@ cp .env.local.example .env.local
 Edit `.env.local` and add your credentials:
 
 ```env
+# MongoDB Connection
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/eldorado?retryWrites=true&w=majority
+
+# NextAuth Configuration
+NEXTAUTH_SECRET=your_random_secret_here  # Generate with: openssl rand -base64 32
+NEXTAUTH_URL=http://localhost:3000
+
+# OAuth Providers (at least one is required)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+FACEBOOK_CLIENT_ID=your_facebook_client_id
+FACEBOOK_CLIENT_SECRET=your_facebook_client_secret
+
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
 
 # Optional: Add map API keys as needed
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
 ```
 
-### 4. Run the development server
+### 4. Configure OAuth Providers
+
+You need to set up OAuth applications for at least one provider:
+
+#### Google OAuth
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new project or select existing one
+3. Enable Google+ API
+4. Create OAuth 2.0 Client ID
+5. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+6. Copy Client ID and Client Secret to `.env.local`
+
+#### Facebook OAuth
+1. Go to [Facebook Developers](https://developers.facebook.com/apps/)
+2. Create a new app
+3. Add Facebook Login product
+4. Add redirect URI: `http://localhost:3000/api/auth/callback/facebook`
+5. Copy App ID and App Secret to `.env.local`
+
+#### GitHub OAuth
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Create a new OAuth App
+3. Set Homepage URL: `http://localhost:3000`
+4. Set Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
+5. Copy Client ID and generate Client Secret, add to `.env.local`
+
+### 5. Run the development server
 
 ```bash
 npm run dev
@@ -82,25 +126,33 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```
 eldorado/
 ├── src/
-│   ├── app/                  # Next.js App Router
-│   │   ├── api/             # API routes
-│   │   │   └── sites/       # Sites CRUD endpoints
-│   │   ├── layout.tsx       # Root layout
-│   │   ├── page.tsx         # Home page
-│   │   └── globals.css      # Global styles
-│   ├── components/          # React components
-│   │   ├── MapView.tsx      # Main map component
-│   │   ├── LeftSidebar.tsx  # Tools sidebar
-│   │   └── RightSidebar.tsx # Details sidebar
-│   ├── lib/                 # Utility libraries
-│   │   └── db.ts           # MongoDB connection
-│   └── types/              # TypeScript type definitions
-│       └── index.ts        # Shared types
-├── public/                 # Static assets
-├── .env.local.example     # Environment variables template
-├── next.config.js         # Next.js configuration
-├── tailwind.config.ts     # Tailwind CSS configuration
-└── package.json           # Dependencies
+│   ├── app/                     # Next.js App Router
+│   │   ├── api/                # API routes
+│   │   │   ├── auth/          # NextAuth authentication
+│   │   │   │   └── [...nextauth]/
+│   │   │   └── sites/         # Sites CRUD endpoints
+│   │   ├── layout.tsx         # Root layout with SessionProvider
+│   │   ├── page.tsx           # Home page
+│   │   └── globals.css        # Global styles
+│   ├── components/            # React components
+│   │   ├── MapView.tsx        # Main map component
+│   │   ├── LeftSidebar.tsx    # Tools sidebar
+│   │   ├── RightSidebar.tsx   # Details sidebar
+│   │   ├── AuthButton.tsx     # Authentication button
+│   │   └── SessionProvider.tsx # NextAuth session wrapper
+│   ├── lib/                   # Utility libraries
+│   │   ├── db.ts             # MongoDB connection
+│   │   ├── mongodb-client.ts # MongoDB client for NextAuth
+│   │   ├── auth.ts           # NextAuth configuration
+│   │   └── auth-middleware.ts # API route protection
+│   └── types/                # TypeScript type definitions
+│       ├── index.ts          # Shared types (User, Site, etc.)
+│       └── next-auth.d.ts    # NextAuth type extensions
+├── public/                   # Static assets
+├── .env.local.example       # Environment variables template
+├── next.config.js           # Next.js configuration
+├── tailwind.config.ts       # Tailwind CSS configuration
+└── package.json             # Dependencies
 ```
 
 ## 🗄️ Database Setup
@@ -117,6 +169,9 @@ eldorado/
 
 The app uses these MongoDB collections:
 
+- `users`: User accounts (created by NextAuth)
+- `accounts`: OAuth provider accounts (created by NextAuth)
+- `sessions`: User sessions (created by NextAuth)
 - `sites`: Archaeological sites, findings, and points of interest
 - `projects`: (Future) Multiple project management
 - `photos`: (Future) Photo metadata and storage references
@@ -142,6 +197,8 @@ See [Google Cloud deployment guide](https://cloud.google.com/run/docs/quickstart
 
 ## 🎯 Roadmap
 
+- [x] User authentication (Google, Facebook, GitHub OAuth)
+- [x] User-specific data isolation
 - [ ] Google Maps integration
 - [ ] Apple Maps support
 - [ ] Historical map overlays
@@ -150,7 +207,6 @@ See [Google Cloud deployment guide](https://cloud.google.com/run/docs/quickstart
 - [ ] Data import (GeoJSON, KML, CSV, GPX)
 - [ ] Export functionality
 - [ ] Multi-project support
-- [ ] User authentication
 - [ ] Collaborative editing
 - [ ] Mobile app (React Native)
 

@@ -1,64 +1,32 @@
-export type PointerType =
-  | 'info_pointer'           // General information pointer
-  | 'findings_pointer'       // Pointer with archaeological findings
-  | 'search_location'        // Possible place to search
-  | 'archaeological_area'    // Archaeological area (legacy)
-  | 'finding'                // Finding (legacy)
-  | 'point_of_interest';     // Point of interest (legacy)
-
-export interface Timespan {
-  period: string;            // e.g., "Cucuteni", "Middle Ages", "Bronze Age"
-  startYear?: number;        // Optional start year (negative for BC)
-  endYear?: number;          // Optional end year (negative for BC)
-  description?: string;      // Additional context about the period
-}
-
-export interface Category {
+export interface User {
+  _id?: string;
   id: string;
-  name: string;
-  color?: string;            // Hex color for visual grouping
-  icon?: string;             // Icon identifier
+  email: string;
+  name?: string;
+  image?: string;
+  provider?: string; // 'google', 'facebook', 'github', etc.
+  emailVerified?: Date | string | null;
+  dateCreated?: Date | string;
+  dateUpdated?: Date | string;
 }
 
 export interface ArchaeologicalSite {
   _id?: string;
   id: string;
+  userId: string; // Owner of this site
+  projectId: string; // Reference to the project this site belongs to
   name: string;
   coordinates: [number, number]; // [latitude, longitude]
   radius: number; // in meters
-  type: PointerType;
-
-  // New fields for enhanced categorization
-  categories?: Category[];   // Multiple categories for grouping
-  tags?: string[];          // Tags for filtering (e.g., "neolithic", "pottery", "burial")
-  timespan?: Timespan;      // Historical period information
-
-  // Pointer-specific information
-  info?: string;            // Additional information (for info_pointer)
-  findings?: Finding[];     // Archaeological findings (for findings_pointer)
-  searchPriority?: 'high' | 'medium' | 'low'; // Priority for search locations
-  searchReason?: string;    // Why this location should be searched
-
-  // Legacy fields
-  category?: string;        // Keep for backward compatibility
+  type: 'archaeological_area' | 'finding' | 'point_of_interest';
+  category?: string;
   description?: string;
   dateDiscovered?: Date | string;
   dateCreated?: Date | string;
   dateUpdated?: Date | string;
-  artifacts?: Artifact[];   // Legacy - use findings instead
+  artifacts?: Artifact[];
   photos?: Photo[];
   metadata?: Record<string, any>;
-}
-
-export interface Finding {
-  id: string;
-  name: string;
-  description?: string;
-  type: 'artifact' | 'structure' | 'burial' | 'pottery' | 'tool' | 'other';
-  dateFound?: Date | string;
-  photos?: Photo[];
-  condition?: 'excellent' | 'good' | 'fair' | 'poor';
-  tags?: string[];
 }
 
 export interface Artifact {
@@ -93,9 +61,9 @@ export interface MapLayer {
 export interface Project {
   _id?: string;
   id: string;
+  userId: string; // Owner of this project
   name: string;
   description?: string;
-  sites: ArchaeologicalSite[];
   layers: MapLayer[];
   defaultCenter?: [number, number];
   defaultZoom?: number;
@@ -111,4 +79,55 @@ export interface ImportData {
     defaultRadius?: number;
     category?: string;
   };
+}
+
+// Georeferencing types - Main georeferencing tool
+export interface ControlPoint {
+  id: string;
+  imageCoordinates: { x: number; y: number }; // pixel coordinates on image
+  mapCoordinates: { lat: number; lng: number }; // geographic coordinates
+}
+
+export interface GeoreferencedLayer {
+  _id?: string;
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl: string; // URL to the uploaded image
+  imageWidth: number; // original image dimensions
+  imageHeight: number;
+  controlPoints: ControlPoint[]; // minimum 3 points for affine transformation
+  bounds: [[number, number], [number, number]]; // [[south, west], [north, east]]
+  opacity: number; // 0-1
+  visible: boolean;
+  dateCreated: Date | string;
+  dateUpdated: Date | string;
+  projectId?: string; // optional association with project
+}
+
+// Georeferencing types - Separate page georeference tool
+export interface ReferencePoint {
+  id: string;
+  imageCoordinates: { x: number; y: number }; // Pixel coordinates on the image
+  mapCoordinates: { lat: number; lng: number }; // Real-world coordinates
+  label?: string;
+}
+
+export interface HistoricalImage {
+  id: string;
+  url: string;
+  name: string;
+  width: number;
+  height: number;
+  dateUploaded: Date | string;
+}
+
+export interface GeoreferencingProject {
+  _id?: string;
+  id: string;
+  name: string;
+  image: HistoricalImage;
+  referencePoints: ReferencePoint[];
+  dateCreated: Date | string;
+  dateUpdated: Date | string;
 }
